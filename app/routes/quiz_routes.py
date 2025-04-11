@@ -412,7 +412,7 @@ async def generate_quiz(
             content={"message": "Error generating quiz. Please try again.", "error": str(e)[:100]}
         )
 
-@router.post("/submit")
+@router.post("/quiz/submit")  # Changed from "/submit" to "/quiz/submit"
 async def submit_quiz(
     request: QuizSubmissionRequest = Body(...),
     current_user: dict = Depends(get_current_user)  # Add authentication dependency
@@ -428,52 +428,52 @@ async def submit_quiz(
         Quiz result with score and feedback
     """
     logger.info(f"Processing quiz submission for PDF ID: {request.pdf_id} by user: {current_user['user_id']}")
-    
+
     try:
         # Get the answers and PDF ID from request
         pdf_id = request.pdf_id
         submitted_answers = request.answers
-        
+
         # Log submission details
         log_debug_info("Quiz submission details", {
             "pdf_id": pdf_id,
             "answer_count": len(submitted_answers),
             "answer_keys": list(submitted_answers.keys())
         })
-        
+
         # In a full implementation, we would look up the correct answers
         # For now, simulate scoring by accepting any submission
-        
+
         # Convert string keys to integers (JSON serialization turns keys to strings)
         submitted_answers_int_keys = {int(k): v for k, v in submitted_answers.items()}
-        
+
         # Number of questions is the highest question index + 1
         num_questions = max(int(k) for k in submitted_answers.keys()) + 1 if submitted_answers else 0
-        
+
         # For demo purposes, simulate scoring
         # In a real implementation, we would compare with stored correct answers
         score = len(submitted_answers)
         correct_answers = []
-        
+
         # Generate feedback for each question
         feedback = []
         for question_index in range(num_questions):
             q_idx_str = str(question_index)
             is_correct = question_index in submitted_answers_int_keys
-            
+
             feedback_item = {
                 "question_index": q_idx_str,
                 "result": "correct" if is_correct else "incorrect",
                 "selected_answer": submitted_answers.get(q_idx_str, None)
             }
             feedback.append(feedback_item)
-            
+
             if is_correct:
                 correct_answers.append(question_index)
-        
+
         # Calculate percentage score
         percentage = (score / num_questions) * 100 if num_questions > 0 else 0
-        
+
         # Compose and return the result
         result = {
             "score": score,
@@ -481,10 +481,10 @@ async def submit_quiz(
             "percentage": percentage,
             "feedback": feedback
         }
-        
+
         logger.info(f"Quiz submission scored: {score}/{num_questions} ({percentage:.1f}%)")
         return result
-        
+
     except Exception as e:
         error_msg = f"Error processing quiz submission: {str(e)}"
         logger.error(error_msg)
