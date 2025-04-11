@@ -412,69 +412,49 @@ async def generate_quiz(
             content={"message": "Error generating quiz. Please try again.", "error": str(e)[:100]}
         )
 
-@router.post("/quiz/submit")  # Changed from "/submit" to "/quiz/submit"
+@router.post("/submit")
 async def submit_quiz(
-    request: QuizSubmissionRequest = Body(...),
-    current_user: dict = Depends(get_current_user)  # Add authentication dependency
+    request: dict = Body(...),
 ):
     """
     Submit quiz answers for scoring.
 
     Args:
-        request: The quiz submission containing pdf_id and answers
-        current_user: Current authenticated user
+        request: Dictionary containing pdf_id and answers
 
     Returns:
         Quiz result with score and feedback
     """
-    logger.info(f"Processing quiz submission for PDF ID: {request.pdf_id} by user: {current_user['user_id']}")
-
     try:
-        # Get the answers and PDF ID from request
-        pdf_id = request.pdf_id
-        submitted_answers = request.answers
+        # Extract data from request
+        pdf_id = request.get('pdf_id', 'unknown')
+        answers = request.get('answers', {})
 
-        # Log submission details
-        log_debug_info("Quiz submission details", {
-            "pdf_id": pdf_id,
-            "answer_count": len(submitted_answers),
-            "answer_keys": list(submitted_answers.keys())
-        })
+        logger.info(f"Processing quiz submission for PDF: {pdf_id} with {len(answers)} answers")
 
-        # In a full implementation, we would look up the correct answers
-        # For now, simulate scoring by accepting any submission
+        # Number of questions is determined by the highest question index + 1
+        num_questions = max([int(k) for k in answers.keys()]) + 1 if answers else 0
 
-        # Convert string keys to integers (JSON serialization turns keys to strings)
-        submitted_answers_int_keys = {int(k): v for k, v in submitted_answers.items()}
+        # For demo purposes, simply count all submitted answers as correct
+        score = len(answers)
 
-        # Number of questions is the highest question index + 1
-        num_questions = max(int(k) for k in submitted_answers.keys()) + 1 if submitted_answers else 0
-
-        # For demo purposes, simulate scoring
-        # In a real implementation, we would compare with stored correct answers
-        score = len(submitted_answers)
-        correct_answers = []
+        # Calculate percentage
+        percentage = (score / num_questions) * 100 if num_questions > 0 else 0
 
         # Generate feedback for each question
         feedback = []
-        for question_index in range(num_questions):
-            q_idx_str = str(question_index)
-            is_correct = question_index in submitted_answers_int_keys
+        for q_idx in range(num_questions):
+            q_idx_str = str(q_idx)
+            is_answered = q_idx_str in answers
 
             feedback_item = {
                 "question_index": q_idx_str,
-                "result": "correct" if is_correct else "incorrect",
-                "selected_answer": submitted_answers.get(q_idx_str, None)
+                "result": "correct" if is_answered else "incorrect",
+                "selected_answer": answers.get(q_idx_str)
             }
             feedback.append(feedback_item)
 
-            if is_correct:
-                correct_answers.append(question_index)
-
-        # Calculate percentage score
-        percentage = (score / num_questions) * 100 if num_questions > 0 else 0
-
-        # Compose and return the result
+        # Create the result object
         result = {
             "score": score,
             "total": num_questions,
@@ -489,7 +469,11 @@ async def submit_quiz(
         error_msg = f"Error processing quiz submission: {str(e)}"
         logger.error(error_msg)
         logger.error(traceback.format_exc())
+
         return JSONResponse(
             status_code=500,
-            content={"message": "Error scoring quiz. Please try again.", "error": str(e)}
+            content={
+                "message": "Error scoring quiz",
+                "error": str(e)
+            }
         )

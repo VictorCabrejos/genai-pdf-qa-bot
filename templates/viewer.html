@@ -119,9 +119,15 @@
                         <h3 class="font-semibold text-lg text-gray-800 mb-2">Answer:</h3>
                         <div id="answer-content" class="bg-gray-50 rounded-lg p-4 text-gray-800"></div>
 
-                        <div class="mt-6">
-                            <h3 class="font-semibold text-md text-gray-700 mb-2">Sources:</h3>
-                            <div id="sources-container" class="space-y-2"></div>
+                        <div class="mt-4">
+                            <button id="toggle-sources" class="flex items-center text-sm text-indigo-600 hover:text-indigo-800">
+                                <i class="fas fa-chevron-right mr-1 transform transition-transform duration-200" id="sources-chevron"></i>
+                                Show Sources
+                            </button>
+                            <div id="sources-wrapper" class="mt-2 hidden">
+                                <h3 class="font-semibold text-md text-gray-700 mb-2">Sources:</h3>
+                                <div id="sources-container" class="space-y-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -476,15 +482,55 @@
                 loadingAnswer.classList.add('hidden');
                 answerContainer.classList.remove('hidden');
 
-                // Display the answer content
-                answerContent.textContent = data.answer;
+                // Reset sources UI
+                document.getElementById('toggle-sources').innerHTML = '<i class="fas fa-chevron-right mr-1 transform transition-transform duration-200" id="sources-chevron"></i> Show Sources';
+                document.getElementById('sources-wrapper').classList.add('hidden');
 
-                // Render source chunks
+                // Get page references for the answer enhancement
+                let pageReferences = new Set();
+                if (data.source_chunks && data.source_chunks.length > 0) {
+                    data.source_chunks.forEach(chunk => {
+                        if (chunk.page_number) {
+                            pageReferences.add(chunk.page_number);
+                        }
+                    });
+                }
+
+                // Format answer with page references if available
+                let formattedAnswer = data.answer;
+                if (pageReferences.size > 0) {
+                    const pagesArray = Array.from(pageReferences).sort((a, b) => a - b);
+                    const pagesStr = pagesArray.join(', ');
+                    formattedAnswer += `\n\n[References: Page${pagesArray.length > 1 ? 's' : ''} ${pagesStr}]`;
+                }
+
+                // Display the answer content
+                answerContent.textContent = formattedAnswer;
+
+                // Render source chunks (hidden initially)
                 renderSourceChunks(data.source_chunks);
 
                 // Scroll to answer
                 answerContainer.scrollIntoView({ behavior: 'smooth' });
             }
+
+            // Toggle sources visibility
+            document.getElementById('toggle-sources').addEventListener('click', function() {
+                const sourcesWrapper = document.getElementById('sources-wrapper');
+                const sourcesChevron = document.getElementById('sources-chevron');
+
+                if (sourcesWrapper.classList.contains('hidden')) {
+                    // Show sources
+                    sourcesWrapper.classList.remove('hidden');
+                    sourcesChevron.classList.add('rotate-90');
+                    this.innerHTML = this.innerHTML.replace('Show Sources', 'Hide Sources');
+                } else {
+                    // Hide sources
+                    sourcesWrapper.classList.add('hidden');
+                    sourcesChevron.classList.remove('rotate-90');
+                    this.innerHTML = this.innerHTML.replace('Hide Sources', 'Show Sources');
+                }
+            });
 
             // Render source chunks
             function renderSourceChunks(chunks) {

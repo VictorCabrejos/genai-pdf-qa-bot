@@ -757,19 +757,32 @@
             }
 
             try {
-                const response = await fetch('/api/quiz/submit', {
+                // Get authentication token
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    alert('You are not logged in. Please log in to submit quizzes.');
+                    window.location.href = '/login';
+                    return;
+                }
+
+                console.log('Submitting quiz answers:', answers);
+
+                // Try the direct submission endpoint with quiz data included
+                const response = await fetch('/api/quiz/submit-direct', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({
                         pdf_id: currentPdfId,
-                        answers: answers
+                        answers: answers,
+                        quizData: quizData  // Include the quiz data for validation
                     })
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to submit quiz');
+                    throw new Error(`Failed to submit quiz: ${response.status} ${response.statusText}`);
                 }
 
                 const result = await response.json();
