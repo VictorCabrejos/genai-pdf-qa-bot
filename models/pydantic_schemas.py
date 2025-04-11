@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional
+from pydantic import BaseModel, Field, EmailStr
+from typing import List, Optional, Dict
 
 
 class QuestionRequest(BaseModel):
@@ -40,3 +40,92 @@ class PDFUploadResponse(BaseModel):
 class ErrorResponse(BaseModel):
     """Model for API error responses."""
     detail: str = Field(..., description="Error message")
+
+
+# User Authentication Models
+class UserCreate(BaseModel):
+    """Model for user registration"""
+    email: EmailStr = Field(..., description="User email address")
+    username: str = Field(..., description="Username")
+    password: str = Field(..., description="Password")
+    full_name: Optional[str] = Field(None, description="User's full name")
+
+
+class UserLogin(BaseModel):
+    """Model for user login"""
+    username: str = Field(..., description="Username or email")
+    password: str = Field(..., description="Password")
+
+
+class UserResponse(BaseModel):
+    """Response model with user details"""
+    user_id: str = Field(..., description="User ID")
+    username: str = Field(..., description="Username")
+    email: EmailStr = Field(..., description="User email address")
+    full_name: Optional[str] = Field(None, description="User's full name")
+
+
+class Token(BaseModel):
+    """Token response model"""
+    access_token: str = Field(..., description="JWT access token")
+    token_type: str = Field(..., description="Token type")
+
+
+class ConversationItem(BaseModel):
+    """Model for a single conversation item (Q&A pair)"""
+    question: str = Field(..., description="User question")
+    answer: str = Field(..., description="AI answer")
+    timestamp: str = Field(..., description="Question timestamp")
+    sources: List[Dict] = Field(..., description="Sources used for the answer")
+
+
+class PDFInfo(BaseModel):
+    """Model for PDF info in user's library"""
+    pdf_id: str = Field(..., description="Unique ID of the PDF")
+    filename: str = Field(..., description="Name of the PDF file")
+    upload_date: str = Field(..., description="Upload timestamp")
+    num_pages: int = Field(..., description="Number of pages in the PDF")
+    num_chunks: int = Field(..., description="Number of chunks extracted")
+    conversation_history: List[ConversationItem] = Field(default_factory=list, description="History of Q&A for this PDF")
+
+
+class QuizRequest(BaseModel):
+    """Request model for generating a quiz from a PDF"""
+    pdf_id: str = Field(..., description="ID of the previously uploaded PDF")
+    num_questions: int = Field(5, description="Number of questions to generate", ge=1, le=20)
+    difficulty: str = Field("medium", description="Quiz difficulty level")
+
+
+class QuizAnswer(BaseModel):
+    """Model for a single quiz answer option"""
+    text: str = Field(..., description="Answer text")
+    is_correct: bool = Field(..., description="Whether this is the correct answer")
+
+
+class QuizQuestion(BaseModel):
+    """Model for a quiz question with multiple choice answers"""
+    question: str = Field(..., description="The question text")
+    answers: List[QuizAnswer] = Field(..., description="Possible answers (multiple choice)")
+    explanation: str = Field(..., description="Explanation of the correct answer")
+
+
+class QuizResponse(BaseModel):
+    """Response model for quiz generation"""
+    pdf_id: str = Field(..., description="ID of the PDF used to generate the quiz")
+    filename: str = Field(..., description="Name of the PDF file")
+    questions: List[QuizQuestion] = Field(..., description="List of generated quiz questions")
+    processing_time: float = Field(..., description="Time taken to generate the quiz in seconds")
+
+
+class QuizSubmission(BaseModel):
+    """Model for submitting quiz answers"""
+    pdf_id: str = Field(..., description="ID of the PDF used for the quiz")
+    answers: Dict[int, int] = Field(..., description="Map of question index to selected answer index")
+
+
+class QuizResult(BaseModel):
+    """Response model for quiz submission results"""
+    score: int = Field(..., description="Number of correct answers")
+    total: int = Field(..., description="Total number of questions")
+    percentage: float = Field(..., description="Percentage score")
+    feedback: List[Dict[str, str]] = Field(..., description="Feedback for each question")

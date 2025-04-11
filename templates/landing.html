@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Q&A Bot - Your AI-powered PDF Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex flex-col">
+        <!-- Navigation -->
+        <nav class="bg-indigo-600 shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <a href="/" class="text-white text-xl font-bold flex items-center">
+                                <i class="fas fa-brain mr-2"></i>
+                                PDF Q&A Bot
+                            </a>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="/login" class="text-white hover:text-gray-200">
+                            <i class="fas fa-sign-in-alt mr-1"></i> Login
+                        </a>
+                        <a href="/signup" class="bg-white text-indigo-600 hover:bg-gray-100 px-4 py-2 rounded-md text-sm font-medium">
+                            Sign Up
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero Section -->
+        <div class="bg-indigo-700 text-white">
+            <div class="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row items-center">
+                <div class="lg:w-1/2 lg:pr-12 mb-10 lg:mb-0">
+                    <h1 class="text-4xl font-extrabold tracking-tight sm:text-5xl mb-4">
+                        Get instant answers from your PDFs with AI
+                    </h1>
+                    <p class="text-lg mb-8">
+                        Upload your PDFs and ask questions in natural language. Our AI-powered bot will find the answers for you, with citations to the source material.
+                    </p>
+                    <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                        <a href="/signup" class="flex-1 bg-white text-indigo-700 hover:bg-gray-100 px-6 py-3 rounded-md text-lg font-medium text-center">
+                            Get Started Free
+                        </a>
+                        <a href="#features" class="flex-1 bg-transparent border border-white text-white hover:bg-indigo-600 px-6 py-3 rounded-md text-lg font-medium text-center">
+                            Learn More
+                        </a>
+                    </div>
+                </div>
+                <div class="lg:w-1/2">
+                    <img src="/static/images/hero-image.svg" alt="PDF Q&A Illustration" class="w-full rounded-lg shadow-xl"
+                         onerror="this.onerror=null; this.src='https://via.placeholder.com/600x400/4f46e5/ffffff?text=PDF+Q%26A+Bot';">
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div id="features" class="py-16 bg-white">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl font-extrabold text-gray-900 text-center mb-12">
+                    Powerful Features
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Feature 1 -->
+                    <div class="bg-gray-50 rounded-lg p-6 shadow-md">
+                        <div class="text-indigo-600 mb-4">
+                            <i class="fas fa-robot text-4xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">AI-Powered Answers</h3>
+                        <p class="text-gray-600">
+                            Get accurate answers from your documents using advanced AI that understands the context of your questions.
+                        </p>
+                    </div>
+
+                    <!-- Feature 2 -->
+                    <div class="bg-gray-50 rounded-lg p-6 shadow-md">
+                        <div class="text-indigo-600 mb-4">
+                            <i class="fas fa-history text-4xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">Conversation History</h3>
+                        <p class="text-gray-600">
+                            Save all your questions and answers for future reference. Continue conversations where you left off.
+                        </p>
+                    </div>
+
+                    <!-- Feature 3 -->
+                    <div class="bg-gray-50 rounded-lg p-6 shadow-md">
+                        <div class="text-indigo-600 mb-4">
+                            <i class="fas fa-file-pdf text-4xl"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">PDF Library</h3>
+                        <p class="text-gray-600">
+                            Manage all your PDFs in one place. Upload, view, and organize your documents with ease.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- How it Works Section -->
+        <div class="py-16 bg-gray-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h2 class="text-3xl font-extrabold text-gray-900 text-center mb-12">
+                    How It Works
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                    <!-- Step 1 -->
+                    <div>
+                        <div class="bg-indigo-100 text-indigo-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                            <span class="text-2xl font-bold">1</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">Create Account</h3>
+                        <p class="text-gray-600">
+                            Sign up for a free account to get started with PDF Q&A Bot.
+                        </p>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div>
+                        <div class="bg-indigo-100 text-indigo-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                            <span class="text-2xl font-bold">2</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">Upload PDFs</h3>
+                        <p class="text-gray-600">
+                            Upload your PDF documents to your personal library.
+                        </p>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div>
+                        <div class="bg-indigo-100 text-indigo-600 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                            <span class="text-2xl font-bold">3</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">Ask Questions</h3>
+                        <p class="text-gray-600">
+                            Ask any question about your PDFs and get instant, accurate answers.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-12 text-center">
+                    <a href="/signup" class="inline-block bg-indigo-600 text-white hover:bg-indigo-700 px-8 py-3 rounded-md text-lg font-medium">
+                        Get Started Now
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="bg-gray-800 text-white py-8 mt-auto">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex flex-col md:flex-row justify-between">
+                    <div class="mb-6 md:mb-0">
+                        <div class="flex items-center">
+                            <i class="fas fa-brain text-indigo-400 mr-2 text-2xl"></i>
+                            <span class="text-xl font-bold">PDF Q&A Bot</span>
+                        </div>
+                        <p class="text-gray-400 mt-2">
+                            Your AI-powered PDF assistant
+                        </p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-8 md:grid-cols-3">
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Company</h3>
+                            <div class="mt-4 space-y-4">
+                                <a href="#" class="text-gray-300 hover:text-white block">About</a>
+                                <a href="#" class="text-gray-300 hover:text-white block">Pricing</a>
+                                <a href="#" class="text-gray-300 hover:text-white block">Contact</a>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Resources</h3>
+                            <div class="mt-4 space-y-4">
+                                <a href="#" class="text-gray-300 hover:text-white block">Docs</a>
+                                <a href="#" class="text-gray-300 hover:text-white block">Support</a>
+                                <a href="#" class="text-gray-300 hover:text-white block">Blog</a>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-400 tracking-wider uppercase">Legal</h3>
+                            <div class="mt-4 space-y-4">
+                                <a href="#" class="text-gray-300 hover:text-white block">Privacy</a>
+                                <a href="#" class="text-gray-300 hover:text-white block">Terms</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-8 border-t border-gray-700 pt-8 md:flex md:items-center md:justify-between">
+                    <div class="flex space-x-6 md:order-2">
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fab fa-facebook"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fab fa-linkedin"></i>
+                        </a>
+                        <a href="#" class="text-gray-400 hover:text-white">
+                            <i class="fab fa-github"></i>
+                        </a>
+                    </div>
+                    <p class="mt-8 text-gray-400 md:mt-0 md:order-1">
+                        &copy; 2025 PDF Q&A Bot. All rights reserved.
+                    </p>
+                </div>
+            </div>
+        </footer>
+
+        <!-- Auth Check Script -->
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                // Check if user is already logged in
+                const token = localStorage.getItem('token');
+                if (token) {
+                    // If logged in, redirect to dashboard
+                    window.location.href = '/dashboard';
+                }
+            });
+        </script>
+    </div>
+</body>
+</html>

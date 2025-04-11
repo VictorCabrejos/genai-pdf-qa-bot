@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Quiz - Study Guide</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <style>
+        .quiz-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .quiz-header {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .question-container {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .question-text {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .answer-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .answer-option {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .answer-option:hover {
+            background-color: #f0f0f0;
+        }
+
+        .answer-option input[type="radio"] {
+            margin-right: 10px;
+        }
+
+        .answer-label {
+            flex-grow: 1;
+        }
+
+        .btn-submit-quiz {
+            display: block;
+            width: 100%;
+            max-width: 200px;
+            margin: 30px auto;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            background-color: #4285f4;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-submit-quiz:hover {
+            background-color: #3367d6;
+        }
+
+        .quiz-result {
+            text-align: center;
+            padding: 20px;
+            margin-top: 30px;
+            background-color: #f0f8ff;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result-score {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .feedback-container {
+            margin-top: 30px;
+        }
+
+        .feedback-item {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+        }
+
+        .feedback-correct {
+            background-color: #e6f7e6;
+            border-left: 4px solid #28a745;
+        }
+
+        .feedback-incorrect {
+            background-color: #ffeaea;
+            border-left: 4px solid #dc3545;
+        }
+
+        .feedback-explanation {
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 2s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* New styles for enhancements */
+        .progress-container {
+            width: 100%;
+            margin: 0 0 20px 0;
+            background-color: #f1f1f1;
+            border-radius: 20px;
+            padding: 3px;
+        }
+
+        .progress-bar {
+            height: 10px;
+            background-color: #4285f4;
+            border-radius: 20px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .quiz-navigation {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .btn-nav {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-nav:hover {
+            background-color: #e0e0e0;
+        }
+
+        .btn-nav:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .question-dots {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .question-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #ddd;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .question-dot.active {
+            background-color: #4285f4;
+            transform: scale(1.2);
+        }
+
+        .question-dot.answered {
+            background-color: #28a745;
+        }
+
+        .question-dot.flagged {
+            border: 2px solid #ff9800;
+        }
+
+        .timer-container {
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .flag-question {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+
+        .flag-question input {
+            margin-right: 8px;
+        }
+
+        @media (max-width: 600px) {
+            .quiz-navigation {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .btn-nav {
+                width: 100%;
+            }
+
+            .question-container {
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex flex-col">
+        <!-- Navigation -->
+        <nav class="bg-indigo-600 shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <a href="/dashboard" class="text-white text-xl font-bold flex items-center">
+                                <i class="fas fa-brain mr-2"></i>
+                                PDF Q&A Bot
+                            </a>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-6">
+                        <a href="/dashboard" class="text-white hover:text-gray-200">
+                            <i class="fas fa-book mr-1"></i> Library
+                        </a>
+                        <a href="/quiz" class="text-white hover:text-gray-200">
+                            <i class="fas fa-question-circle mr-1"></i> Quiz
+                        </a>
+                        <span id="user-name" class="text-white mr-4"></span>
+                        <button id="logout-button" class="text-white hover:text-gray-200">
+                            <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="container mx-auto px-4 py-8">
+            <div class="quiz-container">
+                <div class="quiz-header">
+                    <h1 class="text-2xl font-bold text-gray-800">Interactive Study Guide</h1>
+                    <h2 id="quiz-pdf-name" class="text-xl text-gray-600 mt-2"></h2>
+                </div>
+
+                <div id="quiz-generator" class="question-container">
+                    <h3>Generate a Quiz</h3>
+                    <p>Create a customized quiz based on your PDF document to test your knowledge.</p>
+
+                    <div class="form-group">
+                        <label for="pdf-select">Select a PDF:</label>
+                        <select id="pdf-select" class="form-control">
+                            <option value="">-- Please select a PDF --</option>
+                            <!-- PDF options will be loaded dynamically -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="num-questions">Number of Questions:</label>
+                        <select id="num-questions" class="form-control">
+                            <option value="5">5 Questions</option>
+                            <option value="10">10 Questions</option>
+                            <option value="15">15 Questions</option>
+                            <option value="20">20 Questions</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="difficulty">Difficulty Level:</label>
+                        <select id="difficulty" class="form-control">
+                            <option value="easy">Easy</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="timed-quiz">Timed Quiz:</label>
+                        <select id="timed-quiz" class="form-control">
+                            <option value="none">No Timer</option>
+                            <option value="5">5 Minutes</option>
+                            <option value="10">10 Minutes</option>
+                            <option value="15">15 Minutes</option>
+                        </select>
+                    </div>
+
+                    <button id="btn-generate-quiz" class="btn-submit-quiz">Generate Quiz</button>
+                    <div id="generator-loader" class="loader"></div>
+                </div>
+
+                <div id="quiz-content" style="display: none;">
+                    <!-- Timer display -->
+                    <div id="timer-container" class="timer-container">Time Remaining: <span id="timer-display">--:--</span></div>
+
+                    <!-- Progress bar -->
+                    <div class="progress-container">
+                        <div id="quiz-progress" class="progress-bar"></div>
+                    </div>
+
+                    <!-- Question navigation dots -->
+                    <div id="question-dots" class="question-dots"></div>
+
+                    <form id="quiz-form">
+                        <!-- Questions will be dynamically inserted here -->
+                    </form>
+
+                    <div class="quiz-navigation">
+                        <button id="btn-prev-question" class="btn-nav" disabled>Previous</button>
+                        <button id="btn-flag-question" class="btn-nav">Flag for Review</button>
+                        <button id="btn-next-question" class="btn-nav">Next</button>
+                    </div>
+
+                    <button id="btn-submit-quiz" class="btn-submit-quiz">Submit Answers</button>
+                </div>
+
+                <div id="quiz-result" class="quiz-result">
+                    <div class="result-score">
+                        You scored: <span id="score-value">0</span>/<span id="total-questions">0</span>
+                        (<span id="score-percentage">0</span>%)
+                    </div>
+
+                    <div id="feedback-container" class="feedback-container">
+                        <!-- Feedback will be dynamically inserted here -->
+                    </div>
+
+                    <button id="btn-try-again" class="btn-submit-quiz">Try Another Quiz</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Store the current PDF ID from URL parameters or selected from dropdown
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlPdfId = urlParams.get('pdf_id');
+        let currentPdfId = urlPdfId;
+        const urlPdfName = urlParams.get('name') || 'PDF Document';
+
+        // Only set the PDF name if passed from URL
+        if (urlPdfId) {
+            document.getElementById('quiz-pdf-name').textContent = decodeURIComponent(urlPdfName);
+        }
+
+        // Store quiz data when received from the server
+        let quizData = null;
+        let currentQuestionIndex = 0;
+        let answeredQuestions = new Set();
+        let flaggedQuestions = new Set();
+        let quizTimer = null;
+        let timeRemaining = 0;
+
+        // Load user's PDFs when the page loads
+        window.addEventListener('DOMContentLoaded', async function() {
+            await loadUserPDFs();
+
+            // If PDF ID is in URL, select it in the dropdown
+            if (urlPdfId) {
+                const pdfSelect = document.getElementById('pdf-select');
+                for (let i = 0; i < pdfSelect.options.length; i++) {
+                    if (pdfSelect.options[i].value === urlPdfId) {
+                        pdfSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        });
+
+        // Load the user's PDF library
+        async function loadUserPDFs() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    window.location.href = '/login';
+                    return;
+                }
+
+                const response = await fetch('/api/library', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error('Failed to load PDF library');
+                }
+
+                const pdfs = await response.json();
+                const pdfSelect = document.getElementById('pdf-select');
+
+                // Add each PDF to the dropdown
+                pdfs.forEach(pdf => {
+                    const option = document.createElement('option');
+                    option.value = pdf.pdf_id;
+                    option.textContent = pdf.filename;
+                    pdfSelect.appendChild(option);
+                });
+
+                // Enable the button only if PDFs exist
+                document.getElementById('btn-generate-quiz').disabled = pdfs.length === 0;
+
+                // Show a message if no PDFs are available
+                if (pdfs.length === 0) {
+                    pdfSelect.innerHTML = '<option value="">No PDFs available. Please upload one first.</option>';
+                }
+            } catch (error) {
+                console.error('Error loading PDFs:', error);
+                alert('Failed to load your PDFs. Please refresh the page to try again.');
+            }
+        }
+
+        // Update the quiz PDF name when a new PDF is selected
+        document.getElementById('pdf-select').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            currentPdfId = this.value;
+            document.getElementById('quiz-pdf-name').textContent = selectedOption.textContent;
+        });
+
+        document.getElementById('btn-generate-quiz').addEventListener('click', async function() {
+            // Validate PDF selection
+            const pdfSelect = document.getElementById('pdf-select');
+            if (!pdfSelect.value) {
+                alert('Please select a PDF first');
+                return;
+            }
+
+            // Get authentication token
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('You are not logged in. Please log in to generate quizzes.');
+                window.location.href = '/login';
+                return;
+            }
+
+            currentPdfId = pdfSelect.value;
+            const numQuestions = document.getElementById('num-questions').value;
+            const difficulty = document.getElementById('difficulty').value;
+            const timedOption = document.getElementById('timed-quiz').value;
+
+            // Show loader
+            document.getElementById('generator-loader').style.display = 'block';
+            document.getElementById('btn-generate-quiz').disabled = true;
+
+            try {
+                console.log('Sending quiz generation request for PDF:', currentPdfId);
+                const response = await fetch('/api/quiz/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` // Add authentication token
+                    },
+                    body: JSON.stringify({
+                        pdf_id: currentPdfId,
+                        num_questions: parseInt(numQuestions),
+                        difficulty: difficulty
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Quiz generation failed:', response.status, errorData);
+                    throw new Error(`Failed to generate quiz: ${errorData.message || response.statusText}`);
+                }
+
+                quizData = await response.json();
+                console.log('Quiz data received:', quizData);
+
+                // Reset quiz state
+                currentQuestionIndex = 0;
+                answeredQuestions = new Set();
+                flaggedQuestions = new Set();
+
+                // Setup quiz UI
+                renderQuiz(quizData);
+                setupQuizNavigation();
+                updateQuizProgress();
+
+                // Setup timer if selected
+                if (timedOption !== 'none') {
+                    const minutes = parseInt(timedOption);
+                    timeRemaining = minutes * 60;
+                    startTimer();
+                    document.getElementById('timer-container').style.display = 'block';
+                } else {
+                    document.getElementById('timer-container').style.display = 'none';
+                }
+
+                // Hide generator, show quiz
+                document.getElementById('quiz-generator').style.display = 'none';
+                document.getElementById('quiz-content').style.display = 'block';
+            } catch (error) {
+                console.error('Error generating quiz:', error);
+                alert(`Error generating quiz: ${error.message || 'Please try again.'}`);
+            } finally {
+                document.getElementById('generator-loader').style.display = 'none';
+                document.getElementById('btn-generate-quiz').disabled = false;
+            }
+        });
+
+        function renderQuiz(data) {
+            const quizForm = document.getElementById('quiz-form');
+            quizForm.innerHTML = ''; // Clear previous content
+
+            // Create question dots for navigation
+            const questionDots = document.getElementById('question-dots');
+            questionDots.innerHTML = '';
+
+            data.questions.forEach((question, qIndex) => {
+                // Create question dot
+                const dot = document.createElement('div');
+                dot.className = 'question-dot';
+                dot.dataset.index = qIndex;
+                dot.title = `Question ${qIndex + 1}`;
+                dot.addEventListener('click', () => navigateToQuestion(qIndex));
+                questionDots.appendChild(dot);
+
+                // Create question container
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'question-container';
+                questionDiv.id = `question-${qIndex}`;
+                questionDiv.style.display = qIndex === 0 ? 'block' : 'none';
+
+                const questionText = document.createElement('div');
+                questionText.className = 'question-text';
+                questionText.textContent = `${qIndex + 1}. ${question.question}`;
+
+                const answerOptions = document.createElement('div');
+                answerOptions.className = 'answer-options';
+
+                question.answers.forEach((answer, aIndex) => {
+                    const optionDiv = document.createElement('div');
+                    optionDiv.className = 'answer-option';
+
+                    const radioInput = document.createElement('input');
+                    radioInput.type = 'radio';
+                    radioInput.name = `question-${qIndex}`;
+                    radioInput.value = aIndex;
+                    radioInput.id = `q${qIndex}-a${aIndex}`;
+                    radioInput.addEventListener('change', () => {
+                        answeredQuestions.add(qIndex);
+                        updateQuestionDots();
+                        updateQuizProgress();
+                    });
+
+                    const label = document.createElement('label');
+                    label.className = 'answer-label';
+                    label.htmlFor = `q${qIndex}-a${aIndex}`;
+                    label.textContent = answer.text;
+
+                    optionDiv.appendChild(radioInput);
+                    optionDiv.appendChild(label);
+                    answerOptions.appendChild(optionDiv);
+                });
+
+                // Add flag checkbox
+                const flagDiv = document.createElement('div');
+                flagDiv.className = 'flag-question';
+
+                const flagCheckbox = document.createElement('input');
+                flagCheckbox.type = 'checkbox';
+                flagCheckbox.id = `flag-question-${qIndex}`;
+                flagCheckbox.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        flaggedQuestions.add(qIndex);
+                    } else {
+                        flaggedQuestions.delete(qIndex);
+                    }
+                    updateQuestionDots();
+                });
+
+                const flagLabel = document.createElement('label');
+                flagLabel.htmlFor = `flag-question-${qIndex}`;
+                flagLabel.textContent = 'Flag this question for review';
+
+                flagDiv.appendChild(flagCheckbox);
+                flagDiv.appendChild(flagLabel);
+
+                questionDiv.appendChild(questionText);
+                questionDiv.appendChild(answerOptions);
+                questionDiv.appendChild(flagDiv);
+                quizForm.appendChild(questionDiv);
+            });
+
+            // Set the first dot as active
+            if (questionDots.firstChild) {
+                questionDots.firstChild.classList.add('active');
+            }
+        }
+
+        function setupQuizNavigation() {
+            document.getElementById('btn-prev-question').addEventListener('click', () => {
+                if (currentQuestionIndex > 0) {
+                    navigateToQuestion(currentQuestionIndex - 1);
+                }
+            });
+
+            document.getElementById('btn-next-question').addEventListener('click', () => {
+                if (currentQuestionIndex < quizData.questions.length - 1) {
+                    navigateToQuestion(currentQuestionIndex + 1);
+                }
+            });
+
+            document.getElementById('btn-flag-question').addEventListener('click', () => {
+                const checkbox = document.getElementById(`flag-question-${currentQuestionIndex}`);
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
+            });
+        }
+
+        function navigateToQuestion(index) {
+            // Hide current question
+            document.getElementById(`question-${currentQuestionIndex}`).style.display = 'none';
+
+            // Show new question
+            document.getElementById(`question-${index}`).style.display = 'block';
+
+            // Update current question index
+            currentQuestionIndex = index;
+
+            // Update navigation buttons
+            document.getElementById('btn-prev-question').disabled = (index === 0);
+            document.getElementById('btn-next-question').disabled = (index === quizData.questions.length - 1);
+
+            // Update question dots
+            updateQuestionDots();
+        }
+
+        function updateQuestionDots() {
+            const dots = document.querySelectorAll('.question-dot');
+
+            dots.forEach((dot, index) => {
+                // Reset all classes
+                dot.className = 'question-dot';
+
+                // Add appropriate classes
+                if (index === currentQuestionIndex) {
+                    dot.classList.add('active');
+                }
+
+                if (answeredQuestions.has(index)) {
+                    dot.classList.add('answered');
+                }
+
+                if (flaggedQuestions.has(index)) {
+                    dot.classList.add('flagged');
+                }
+            });
+        }
+
+        function updateQuizProgress() {
+            const progress = (answeredQuestions.size / quizData.questions.length) * 100;
+            document.getElementById('quiz-progress').style.width = `${progress}%`;
+        }
+
+        function startTimer() {
+            // Clear any existing timer
+            if (quizTimer) {
+                clearInterval(quizTimer);
+            }
+
+            // Update timer display
+            updateTimerDisplay();
+
+            // Start new timer
+            quizTimer = setInterval(() => {
+                timeRemaining--;
+                updateTimerDisplay();
+
+                if (timeRemaining <= 0) {
+                    clearInterval(quizTimer);
+                    submitQuiz();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            document.getElementById('timer-display').textContent =
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+            // Change color when time is running out
+            if (timeRemaining < 60) {
+                document.getElementById('timer-display').style.color = '#dc3545';
+            }
+        }
+
+        document.getElementById('btn-submit-quiz').addEventListener('click', async function(e) {
+            e.preventDefault();
+            submitQuiz();
+        });
+
+        async function submitQuiz() {
+            // Stop timer if it's running
+            if (quizTimer) {
+                clearInterval(quizTimer);
+            }
+
+            // Collect answers
+            const answers = {};
+            quizData.questions.forEach((_, qIndex) => {
+                const selectedOption = document.querySelector(`input[name="question-${qIndex}"]:checked`);
+                if (selectedOption) {
+                    answers[qIndex] = parseInt(selectedOption.value);
+                }
+            });
+
+            // Check if all questions are answered
+            if (Object.keys(answers).length < quizData.questions.length) {
+                const missing = quizData.questions.length - Object.keys(answers).length;
+                const proceed = confirm(`You have ${missing} unanswered question(s). Do you want to submit anyway?`);
+                if (!proceed) {
+                    // Find first unanswered question
+                    for (let i = 0; i < quizData.questions.length; i++) {
+                        if (!answeredQuestions.has(i)) {
+                            navigateToQuestion(i);
+                            return;
+                        }
+                    }
+                    return;
+                }
+            }
+
+            try {
+                const response = await fetch('/api/quiz/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        pdf_id: currentPdfId,
+                        answers: answers
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to submit quiz');
+                }
+
+                const result = await response.json();
+                showQuizResults(result);
+
+            } catch (error) {
+                console.error('Error submitting quiz:', error);
+                alert('Error submitting quiz. Please try again.');
+            }
+        }
+
+        function showQuizResults(result) {
+            // Hide quiz, show results
+            document.getElementById('quiz-content').style.display = 'none';
+            document.getElementById('quiz-result').style.display = 'block';
+
+            // Update score
+            document.getElementById('score-value').textContent = result.score;
+            document.getElementById('total-questions').textContent = result.total;
+            document.getElementById('score-percentage').textContent = result.percentage.toFixed(1);
+
+            // Show feedback
+            const feedbackContainer = document.getElementById('feedback-container');
+            feedbackContainer.innerHTML = '';
+
+            result.feedback.forEach((item) => {
+                const questionIndex = parseInt(item.question_index);
+                const question = quizData.questions[questionIndex];
+
+                const feedbackDiv = document.createElement('div');
+                feedbackDiv.className = `feedback-item feedback-${item.result}`;
+
+                // Question text
+                const questionText = document.createElement('div');
+                questionText.className = 'question-text';
+                questionText.textContent = `${questionIndex + 1}. ${question.question}`;
+
+                // Correct answer
+                const correctAnswer = question.answers.find(a => a.is_correct).text;
+                const answerText = document.createElement('div');
+                answerText.innerHTML = `<strong>Correct answer:</strong> ${correctAnswer}`;
+
+                // Explanation
+                const explanation = document.createElement('div');
+                explanation.className = 'feedback-explanation';
+                explanation.textContent = question.explanation;
+
+                feedbackDiv.appendChild(questionText);
+                feedbackDiv.appendChild(answerText);
+                feedbackDiv.appendChild(explanation);
+                feedbackContainer.appendChild(feedbackDiv);
+            });
+        }
+
+        document.getElementById('btn-try-again').addEventListener('click', function() {
+            // Reset to quiz generator
+            document.getElementById('quiz-result').style.display = 'none';
+            document.getElementById('quiz-generator').style.display = 'block';
+        });
+    </script>
+</body>
+</html>

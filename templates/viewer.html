@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Viewer - PDF Q&A Bot</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.10.377/build/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.10.377/build/pdf.worker.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen flex flex-col">
+        <!-- Navigation -->
+        <nav class="bg-indigo-600 shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <a href="/dashboard" class="text-white text-xl font-bold flex items-center">
+                                <i class="fas fa-brain mr-2"></i>
+                                PDF Q&A Bot
+                            </a>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <a href="/dashboard" class="text-white hover:text-gray-200">
+                            <i class="fas fa-book mr-1"></i> Library
+                        </a>
+                        <a href="/quiz" class="text-white hover:text-gray-200">
+                            <i class="fas fa-question-circle mr-1"></i> Quiz
+                        </a>
+                        <button id="logout-button" class="text-white hover:text-gray-200">
+                            <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- PDF Title Bar -->
+        <div class="bg-white shadow-md">
+            <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between">
+                    <h1 id="pdf-title" class="text-xl font-bold text-gray-800">Loading PDF...</h1>
+                    <div class="text-sm text-gray-600">
+                        Page <span id="current-page">0</span> of <span id="total-pages">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-grow container mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- PDF Preview Column -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+                    <div class="flex justify-between mb-4">
+                        <div class="flex space-x-2">
+                            <button id="prev-page" class="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">
+                                <i class="fas fa-chevron-left"></i> Previous
+                            </button>
+                            <button id="next-page" class="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700">
+                                Next <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                        <div>
+                            <input id="page-num" type="number" min="1" class="w-16 px-2 py-1 border border-gray-300 rounded text-center" value="1">
+                            <span class="mx-2">of</span>
+                            <span id="page-count">0</span>
+                        </div>
+                    </div>
+
+                    <div id="pdf-container" class="border border-gray-300 rounded-lg overflow-hidden bg-gray-200 flex justify-center">
+                        <canvas id="pdf-render" class="max-w-full"></canvas>
+                    </div>
+                </div>
+
+                <!-- Conversation History -->
+                <div class="bg-white rounded-lg shadow-md p-4">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Conversation History</h2>
+
+                    <div id="loading-history" class="flex justify-center py-8">
+                        <div class="loader"></div>
+                    </div>
+
+                    <div id="empty-history" class="hidden text-center py-8 text-gray-500">
+                        <i class="fas fa-comments text-4xl mb-2"></i>
+                        <p>No questions asked yet. Start a conversation above.</p>
+                    </div>
+
+                    <div id="conversation-history" class="hidden space-y-6">
+                        <!-- Conversation items will be inserted here dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Q&A Column -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-md p-4 sticky top-4">
+                    <h2 class="text-lg font-semibold text-gray-800 mb-4">Ask a Question</h2>
+
+                    <form id="question-form" class="mb-6">
+                        <div class="mb-4">
+                            <textarea id="question-input" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ask any question about this document..."></textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition duration-150 ease-in-out shadow-md flex items-center justify-center">
+                            <i class="fas fa-paper-plane mr-2"></i>
+                            Ask Question
+                        </button>
+                    </form>
+
+                    <div id="loading-answer" class="hidden flex justify-center py-6">
+                        <div class="loader"></div>
+                    </div>
+
+                    <div id="answer-container" class="hidden">
+                        <h3 class="font-semibold text-lg text-gray-800 mb-2">Answer:</h3>
+                        <div id="answer-content" class="bg-gray-50 rounded-lg p-4 text-gray-800"></div>
+
+                        <div class="mt-6">
+                            <h3 class="font-semibold text-md text-gray-700 mb-2">Sources:</h3>
+                            <div id="sources-container" class="space-y-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Conversation Item Template (Hidden) -->
+    <template id="conversation-item-template">
+        <div class="conversation-item border-l-2 border-indigo-500 pl-4">
+            <div class="question font-medium text-gray-800 mb-2"></div>
+            <div class="answer text-gray-700 mb-3"></div>
+            <div class="metadata text-xs text-gray-500 flex items-center">
+                <i class="far fa-clock mr-1"></i>
+                <span class="timestamp"></span>
+                <button class="jump-to-source ml-4 text-indigo-600 hover:text-indigo-800">
+                    <i class="fas fa-search-location mr-1"></i>
+                    View Sources
+                </button>
+            </div>
+        </div>
+    </template>
+
+    <!-- Source Item Template (Hidden) -->
+    <template id="source-item-template">
+        <div class="source-citation">
+            <button class="goto-page text-xs font-medium text-indigo-600 hover:text-indigo-800">
+                <i class="fas fa-file-alt mr-1"></i>
+                Page <span class="page-num"></span>
+            </button>
+            <div class="source-text text-sm text-gray-700 mt-1"></div>
+            <div class="source-score text-xs text-gray-500 mt-1">
+                <i class="fas fa-star text-yellow-500 mr-1"></i>
+                Relevance: <span class="score-value"></span>%
+            </div>
+        </div>
+    </template>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is logged in
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            // Get PDF ID from URL
+            const pathParts = window.location.pathname.split('/');
+            const pdfId = pathParts[pathParts.length - 1];
+
+            if (!pdfId) {
+                window.location.href = '/dashboard';
+                return;
+            }
+
+            // PDF.js initialization
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@2.10.377/build/pdf.worker.min.js';
+
+            let pdfDoc = null,
+                pageNum = 1,
+                pageRendering = false,
+                pageNumPending = null,
+                scale = 1.5;
+
+            // DOM Elements
+            const pdfTitle = document.getElementById('pdf-title');
+            const pdfContainer = document.getElementById('pdf-container');
+            const canvas = document.getElementById('pdf-render');
+            const ctx = canvas.getContext('2d');
+            const prevButton = document.getElementById('prev-page');
+            const nextButton = document.getElementById('next-page');
+            const pageNumInput = document.getElementById('page-num');
+            const pageCount = document.getElementById('page-count');
+            const currentPageDisplay = document.getElementById('current-page');
+            const totalPagesDisplay = document.getElementById('total-pages');
+            const questionForm = document.getElementById('question-form');
+            const questionInput = document.getElementById('question-input');
+            const loadingAnswer = document.getElementById('loading-answer');
+            const answerContainer = document.getElementById('answer-container');
+            const answerContent = document.getElementById('answer-content');
+            const sourcesContainer = document.getElementById('sources-container');
+            const loadingHistory = document.getElementById('loading-history');
+            const emptyHistory = document.getElementById('empty-history');
+            const conversationHistory = document.getElementById('conversation-history');
+            const logoutButton = document.getElementById('logout-button');
+
+            // PDF Info
+            let pdfInfo = null;
+
+            // Render PDF page
+            function renderPage(num) {
+                pageRendering = true;
+
+                // Update UI
+                currentPageDisplay.textContent = num;
+                pageNumInput.value = num;
+
+                // Get page
+                pdfDoc.getPage(num).then(function(page) {
+                    // Adjust viewport to canvas
+                    const viewport = page.getViewport({ scale });
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    // Render PDF page into canvas
+                    const renderContext = {
+                        canvasContext: ctx,
+                        viewport: viewport
+                    };
+
+                    const renderTask = page.render(renderContext);
+
+                    // Wait for rendering to finish
+                    renderTask.promise.then(function() {
+                        pageRendering = false;
+
+                        if (pageNumPending !== null) {
+                            // New page rendering is pending
+                            renderPage(pageNumPending);
+                            pageNumPending = null;
+                        }
+                    });
+                });
+            }
+
+            // Queue rendering of a page if another is in progress
+            function queueRenderPage(num) {
+                if (pageRendering) {
+                    pageNumPending = num;
+                } else {
+                    renderPage(num);
+                }
+            }
+
+            // Go to previous page
+            function prevPage() {
+                if (pageNum <= 1) {
+                    return;
+                }
+                pageNum--;
+                queueRenderPage(pageNum);
+            }
+
+            // Go to next page
+            function nextPage() {
+                if (pageNum >= pdfDoc.numPages) {
+                    return;
+                }
+                pageNum++;
+                queueRenderPage(pageNum);
+            }
+
+            // Initialize PDF viewer
+            async function initPdf() {
+                try {
+                    // Fetch PDF info
+                    const pdfsResponse = await fetch('/api/library', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (!pdfsResponse.ok) {
+                        throw new Error('Failed to fetch PDF library');
+                    }
+
+                    const pdfs = await pdfsResponse.json();
+                    pdfInfo = pdfs.find(pdf => pdf.pdf_id === pdfId);
+
+                    if (!pdfInfo) {
+                        throw new Error('PDF not found');
+                    }
+
+                    // Set PDF title
+                    pdfTitle.textContent = pdfInfo.filename;
+
+                    // Load PDF file with authentication token
+                    const pdfUrl = `/api/pdf/${pdfId}`;
+                    const loadingTask = pdfjsLib.getDocument({
+                        url: pdfUrl,
+                        httpHeaders: {
+                            'Authorization': `Bearer ${token}`
+                        },
+                        withCredentials: true
+                    });
+
+                    loadingTask.promise.then(function(pdf) {
+                        pdfDoc = pdf;
+
+                        // Update UI
+                        pageCount.textContent = pdf.numPages;
+                        totalPagesDisplay.textContent = pdf.numPages;
+
+                        // Initial render
+                        renderPage(pageNum);
+
+                        // Load conversation history
+                        loadConversationHistory();
+                    }).catch(function(error) {
+                        console.error('Error loading PDF:', error);
+                        alert('Error loading PDF. Please try again.');
+                    });
+                } catch (error) {
+                    console.error('Error loading PDF info:', error);
+                    alert('Error loading PDF information. Redirecting to dashboard.');
+                    window.location.href = '/dashboard';
+                }
+            }
+
+            // Load conversation history
+            async function loadConversationHistory() {
+                try {
+                    const response = await fetch(`/api/pdf/${pdfId}/history`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch conversation history');
+                    }
+
+                    const history = await response.json();
+
+                    // Hide loading indicator
+                    loadingHistory.classList.add('hidden');
+
+                    // Show empty state or conversation history
+                    if (!history || history.length === 0) {
+                        emptyHistory.classList.remove('hidden');
+                    } else {
+                        conversationHistory.classList.remove('hidden');
+                        renderConversationHistory(history);
+                    }
+                } catch (error) {
+                    console.error('Error loading conversation history:', error);
+                    loadingHistory.classList.add('hidden');
+                    emptyHistory.classList.remove('hidden');
+                }
+            }
+
+            // Render conversation history
+            function renderConversationHistory(history) {
+                conversationHistory.innerHTML = ''; // Clear existing items
+
+                const template = document.getElementById('conversation-item-template');
+
+                // Sort by newest first
+                history.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                history.forEach(item => {
+                    const clone = document.importNode(template.content, true);
+
+                    // Set question and answer
+                    clone.querySelector('.question').textContent = item.question;
+                    clone.querySelector('.answer').textContent = item.answer;
+
+                    // Format timestamp
+                    const timestamp = new Date(item.timestamp).toLocaleString();
+                    clone.querySelector('.timestamp').textContent = timestamp;
+
+                    // Add source button action
+                    const sourceButton = clone.querySelector('.jump-to-source');
+                    sourceButton.addEventListener('click', () => {
+                        // Show answer and sources
+                        answerContent.textContent = item.answer;
+                        renderSourceChunks(item.sources);
+                        answerContainer.classList.remove('hidden');
+
+                        // Scroll to answer
+                        answerContainer.scrollIntoView({ behavior: 'smooth' });
+                    });
+
+                    // Add to conversation history
+                    conversationHistory.appendChild(clone);
+                });
+            }
+
+            // Handle question submission
+            questionForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+
+                const question = questionInput.value.trim();
+
+                if (!question) {
+                    return;
+                }
+
+                // Show loading state
+                loadingAnswer.classList.remove('hidden');
+                answerContainer.classList.add('hidden');
+
+                try {
+                    const response = await fetch('/api/ask', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                            question: question,
+                            pdf_id: pdfId
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    // Display the answer
+                    displayAnswer(data);
+
+                    // Add to conversation history UI
+                    if (conversationHistory.classList.contains('hidden')) {
+                        emptyHistory.classList.add('hidden');
+                        conversationHistory.classList.remove('hidden');
+                    }
+
+                    const template = document.getElementById('conversation-item-template');
+                    const clone = document.importNode(template.content, true);
+
+                    clone.querySelector('.question').textContent = question;
+                    clone.querySelector('.answer').textContent = data.answer;
+                    clone.querySelector('.timestamp').textContent = new Date().toLocaleString();
+
+                    const sourceButton = clone.querySelector('.jump-to-source');
+                    sourceButton.addEventListener('click', () => {
+                        answerContent.textContent = data.answer;
+                        renderSourceChunks(data.source_chunks);
+                        answerContainer.classList.remove('hidden');
+                        answerContainer.scrollIntoView({ behavior: 'smooth' });
+                    });
+
+                    // Add to top of history
+                    conversationHistory.insertBefore(clone, conversationHistory.firstChild);
+
+                    // Clear question input
+                    questionInput.value = '';
+
+                } catch (error) {
+                    console.error('Error asking question:', error);
+                    loadingAnswer.classList.add('hidden');
+                    alert('Error asking question. Please try again.');
+                }
+            });
+
+            // Display answer and sources
+            function displayAnswer(data) {
+                loadingAnswer.classList.add('hidden');
+                answerContainer.classList.remove('hidden');
+
+                // Display the answer content
+                answerContent.textContent = data.answer;
+
+                // Render source chunks
+                renderSourceChunks(data.source_chunks);
+
+                // Scroll to answer
+                answerContainer.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            // Render source chunks
+            function renderSourceChunks(chunks) {
+                sourcesContainer.innerHTML = ''; // Clear previous sources
+
+                if (!chunks || chunks.length === 0) {
+                    sourcesContainer.innerHTML = '<p class="text-gray-500">No source chunks available</p>';
+                    return;
+                }
+
+                const template = document.getElementById('source-item-template');
+
+                chunks.forEach(source => {
+                    const clone = document.importNode(template.content, true);
+
+                    // Set page number
+                    const pageNumEl = clone.querySelector('.page-num');
+                    pageNumEl.textContent = source.page_number;
+
+                    // Set source text
+                    const sourceTextEl = clone.querySelector('.source-text');
+                    sourceTextEl.textContent = source.text;
+
+                    // Set relevance score
+                    const scoreEl = clone.querySelector('.score-value');
+                    scoreEl.textContent = (source.score * 100).toFixed(1);
+
+                    // Add go to page action
+                    const gotoPageBtn = clone.querySelector('.goto-page');
+                    gotoPageBtn.addEventListener('click', () => {
+                        pageNum = source.page_number;
+                        queueRenderPage(pageNum);
+
+                        // Scroll to PDF viewer
+                        pdfContainer.scrollIntoView({ behavior: 'smooth' });
+
+                        // Highlight the text in future enhancement
+                    });
+
+                    // Add to sources container
+                    sourcesContainer.appendChild(clone);
+                });
+            }
+
+            // Set up page navigation controls
+            prevButton.addEventListener('click', prevPage);
+            nextButton.addEventListener('click', nextPage);
+
+            pageNumInput.addEventListener('change', function() {
+                const num = parseInt(this.value);
+                if (num && num > 0 && num <= pdfDoc.numPages) {
+                    pageNum = num;
+                    queueRenderPage(pageNum);
+                }
+            });
+
+            // Handle logout
+            logoutButton.addEventListener('click', function() {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+            });
+
+            // Initialize
+            initPdf();
+        });
+    </script>
+</body>
+</html>

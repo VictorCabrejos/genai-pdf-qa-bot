@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - PDF Q&A Bot</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex flex-col">
+        <!-- Navigation -->
+        <nav class="bg-indigo-600 shadow-lg">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <a href="/dashboard" class="text-white text-xl font-bold flex items-center">
+                                <i class="fas fa-brain mr-2"></i>
+                                PDF Q&A Bot
+                            </a>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-6">
+                        <a href="/dashboard" class="text-white hover:text-gray-200">
+                            <i class="fas fa-book mr-1"></i> Library
+                        </a>
+                        <a href="/quiz" class="text-white hover:text-gray-200">
+                            <i class="fas fa-question-circle mr-1"></i> Quiz
+                        </a>
+                        <span id="user-name" class="text-white mr-4"></span>
+                        <button id="logout-button" class="text-white hover:text-gray-200">
+                            <i class="fas fa-sign-out-alt mr-1"></i> Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="container mx-auto px-4 py-8">
+            <div class="flex flex-col md:flex-row space-y-6 md:space-y-0 md:space-x-6">
+                <!-- Left Column: Upload Section -->
+                <div class="w-full md:w-1/3">
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Upload New PDF</h2>
+                        <form id="upload-form">
+                            <div class="mb-4">
+                                <div class="relative border-2 border-dashed border-gray-300 rounded-lg px-4 py-6 text-center hover:bg-gray-50 transition duration-150 ease-in-out cursor-pointer">
+                                    <input type="file" id="pdf-file" name="file" accept="application/pdf" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                                    <div id="file-name" class="text-gray-500">
+                                        <i class="fas fa-upload mr-2"></i>
+                                        Drag & Drop or Click to browse
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition duration-150 ease-in-out shadow-md flex items-center justify-center">
+                                <i class="fas fa-cloud-upload-alt mr-2"></i>
+                                Upload PDF
+                            </button>
+                        </form>
+                        <div id="upload-status" class="hidden mt-4"></div>
+                    </div>
+                </div>
+
+                <!-- Right Column: PDF Library -->
+                <div class="w-full md:w-2/3">
+                    <div class="bg-white rounded-lg shadow-md p-6">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4">Your PDF Library</h2>
+                        <div id="loading-library" class="flex justify-center py-8">
+                            <div class="loader"></div>
+                        </div>
+                        <div id="empty-library" class="hidden text-center py-8 text-gray-500">
+                            <i class="fas fa-folder-open text-4xl mb-2"></i>
+                            <p>Your PDF library is empty. Upload a PDF to get started.</p>
+                        </div>
+                        <div id="pdf-library" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- PDF cards will be inserted here dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Card Template (Hidden) -->
+    <template id="pdf-card-template">
+        <div class="pdf-card bg-gray-50 rounded-lg p-4 border border-gray-200 hover:shadow-md transition duration-150">
+            <div class="flex items-start justify-between">
+                <div class="flex-1">
+                    <h3 class="pdf-title font-medium truncate"></h3>
+                    <div class="pdf-details text-sm text-gray-600 mt-1"></div>
+                </div>
+                <div class="pdf-actions flex space-x-1">
+                    <button class="view-pdf-btn text-indigo-600 hover:text-indigo-800" title="View PDF">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="delete-pdf-btn text-red-600 hover:text-red-800" title="Delete PDF">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="pdf-history mt-3 text-sm">
+                <div class="flex items-center text-gray-600">
+                    <i class="fas fa-comment-dots mr-1"></i>
+                    <span class="conversation-count">0</span> conversations
+                </div>
+            </div>
+            <a href="#" class="view-pdf-link mt-3 inline-block text-indigo-600 text-sm hover:text-indigo-800">
+                <i class="fas fa-external-link-alt mr-1"></i>
+                View & Ask Questions
+            </a>
+        </div>
+    </template>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if user is logged in
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '/login';
+                return;
+            }
+
+            // DOM Elements
+            const uploadForm = document.getElementById('upload-form');
+            const pdfFileInput = document.getElementById('pdf-file');
+            const fileNameDisplay = document.getElementById('file-name');
+            const uploadStatus = document.getElementById('upload-status');
+            const pdfLibrary = document.getElementById('pdf-library');
+            const loadingLibrary = document.getElementById('loading-library');
+            const emptyLibrary = document.getElementById('empty-library');
+            const userNameElement = document.getElementById('user-name');
+            const logoutButton = document.getElementById('logout-button');
+
+            // Fetch user profile
+            async function fetchUserProfile() {
+                try {
+                    const response = await fetch('/api/auth/me', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch user profile');
+                    }
+
+                    const data = await response.json();
+                    userNameElement.textContent = data.username;
+
+                } catch (error) {
+                    console.error('Error fetching user profile:', error);
+                }
+            }
+
+            // Fetch PDF library
+            async function fetchPdfLibrary() {
+                try {
+                    const response = await fetch('/api/library', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch PDF library');
+                    }
+
+                    const pdfs = await response.json();
+
+                    // Hide loading indicator
+                    loadingLibrary.classList.add('hidden');
+
+                    // Show empty state or PDF library
+                    if (pdfs.length === 0) {
+                        emptyLibrary.classList.remove('hidden');
+                    } else {
+                        pdfLibrary.classList.remove('hidden');
+                        renderPdfLibrary(pdfs);
+                    }
+
+                } catch (error) {
+                    console.error('Error fetching PDF library:', error);
+                    loadingLibrary.classList.add('hidden');
+                    emptyLibrary.classList.remove('hidden');
+                }
+            }
+
+            // Render PDF library
+            function renderPdfLibrary(pdfs) {
+                pdfLibrary.innerHTML = ''; // Clear existing cards
+
+                const template = document.getElementById('pdf-card-template');
+
+                pdfs.forEach(pdf => {
+                    const clone = document.importNode(template.content, true);
+
+                    // Set PDF title
+                    const titleEl = clone.querySelector('.pdf-title');
+                    titleEl.textContent = pdf.filename;
+
+                    // Set PDF details
+                    const detailsEl = clone.querySelector('.pdf-details');
+                    const uploadDate = new Date(pdf.upload_date).toLocaleDateString();
+                    detailsEl.textContent = `${pdf.num_pages} pages · Uploaded: ${uploadDate}`;
+
+                    // Set conversation count
+                    const convoCount = clone.querySelector('.conversation-count');
+                    convoCount.textContent = pdf.conversation_history ? pdf.conversation_history.length : '0';
+
+                    // Set view link
+                    const viewLink = clone.querySelector('.view-pdf-link');
+                    viewLink.href = `/view/${pdf.pdf_id}`;
+
+                    // Set view button action
+                    const viewBtn = clone.querySelector('.view-pdf-btn');
+                    viewBtn.addEventListener('click', () => {
+                        window.location.href = `/view/${pdf.pdf_id}`;
+                    });
+
+                    // Set delete button action
+                    const deleteBtn = clone.querySelector('.delete-pdf-btn');
+                    deleteBtn.addEventListener('click', () => deletePdf(pdf.pdf_id, pdf.filename));
+
+                    // Add card to library
+                    pdfLibrary.appendChild(clone);
+                });
+            }
+
+            // Delete PDF function
+            async function deletePdf(pdfId, filename) {
+                if (!confirm(`Are you sure you want to delete "${filename}"? This action cannot be undone.`)) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/api/pdf/${pdfId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to delete PDF');
+                    }
+
+                    // Refresh PDF library
+                    pdfLibrary.innerHTML = ''; // Clear the PDF cards
+                    pdfLibrary.classList.add('hidden');
+
+                    // Show loading indicator briefly
+                    loadingLibrary.classList.remove('hidden');
+                    emptyLibrary.classList.add('hidden');
+
+                    // Then fetch updated library
+                    setTimeout(() => {
+                        fetchPdfLibrary();
+                    }, 300);
+
+                } catch (error) {
+                    console.error('Error deleting PDF:', error);
+                    alert('Failed to delete PDF. Please try again.');
+                }
+            }
+
+            // Handle file selection
+            pdfFileInput.addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    const fileName = this.files[0].name;
+                    fileNameDisplay.innerHTML = `<i class="far fa-file-pdf text-red-500 mr-2"></i> ${fileName}`;
+                    fileNameDisplay.classList.remove('text-gray-500');
+                    fileNameDisplay.classList.add('text-gray-800');
+                } else {
+                    fileNameDisplay.innerHTML = `<i class="fas fa-upload mr-2"></i> Drag & Drop or Click to browse`;
+                    fileNameDisplay.classList.remove('text-gray-800');
+                    fileNameDisplay.classList.add('text-gray-500');
+                }
+            });
+
+            // Handle PDF upload
+            uploadForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+
+                const fileInput = document.getElementById('pdf-file');
+                const file = fileInput.files[0];
+
+                if (!file) {
+                    showStatus('Please select a PDF file first.', 'error');
+                    return;
+                }
+
+                if (!file.type.includes('pdf')) {
+                    showStatus('Please upload a valid PDF file.', 'error');
+                    return;
+                }
+
+                // Show loading state
+                showStatus('Uploading and processing PDF...', 'loading');
+
+                const formData = new FormData();
+                formData.append('file', file);
+
+                try {
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    // Show success message
+                    showStatus(`PDF uploaded successfully! ${data.num_chunks} chunks extracted from ${data.num_pages} pages.`, 'success');
+
+                    // Reset file input
+                    fileInput.value = '';
+                    fileNameDisplay.innerHTML = `<i class="fas fa-upload mr-2"></i> Drag & Drop or Click to browse`;
+                    fileNameDisplay.classList.remove('text-gray-800');
+                    fileNameDisplay.classList.add('text-gray-500');
+
+                    // Refresh PDF library
+                    setTimeout(() => {
+                        fetchPdfLibrary();
+                    }, 1000);
+
+                } catch (error) {
+                    console.error('Error uploading PDF:', error);
+                    showStatus(`Error uploading PDF: ${error.message}`, 'error');
+                }
+            });
+
+            // Show status messages
+            function showStatus(message, type = 'info') {
+                uploadStatus.innerHTML = message;
+                uploadStatus.classList.remove('hidden', 'status-success', 'status-error');
+
+                if (type === 'success') {
+                    uploadStatus.classList.add('status-success');
+                } else if (type === 'error') {
+                    uploadStatus.classList.add('status-error');
+                } else if (type === 'loading') {
+                    uploadStatus.innerHTML = `
+                        <div class="flex items-center">
+                            <div class="loader mr-3" style="width: 20px; height: 20px;"></div>
+                            <span>${message}</span>
+                        </div>
+                    `;
+                }
+
+                uploadStatus.classList.remove('hidden');
+            }
+
+            // Handle logout
+            logoutButton.addEventListener('click', function() {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+            });
+
+            // Initialize
+            fetchUserProfile();
+            fetchPdfLibrary();
+        });
+    </script>
+</body>
+</html>
