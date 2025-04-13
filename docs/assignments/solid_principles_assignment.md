@@ -6,8 +6,8 @@ En esta tarea, identificarás violaciones a los principios SOLID en el código a
 
 ## Instrucciones
 
-1. Trabajarás en grupos de dos personas.
-2. Cada grupo debe seleccionar **UNO** de los tres escenarios descritos a continuación.
+1. Trabajarás en grupos asignados.
+2. A cada grupo se le asignará **UNO** de los escenarios descritos a continuación.
 3. Para el escenario seleccionado:
    - Identifica qué principios SOLID se están violando (máximo 2 principios)
    - Explica por qué constituyen una violación
@@ -73,7 +73,7 @@ def chunk_text(pages: List[str], chunk_size: int = 1000, overlap: int = 200) -> 
 
 ### Escenario 2: Duplicación de Código en Autenticación (`app/auth/routes.py`)
 
-El sistema de autenticación tiene código duplicado en las rutas de login:
+El sistema de autenticación tiene código duplicado en las rutas de login como puedes ver a continuación. Observa cómo las dos funciones (`login_for_access_token` y `login_json`) contienen casi exactamente el mismo código para autenticar usuarios y generar tokens:
 
 ```python
 # En app/auth/routes.py
@@ -121,54 +121,13 @@ async def login_json(user_data: UserLogin):
     return {"access_token": access_token, "token_type": "bearer"}
 ```
 
-**Tarea**: Refactoriza este código para eliminar la duplicación, aplicando el Principio DRY y mejorando SRP.
+**Tarea**: Refactoriza este código para eliminar la duplicación, aplicando el Principio de Responsabilidad Única (SRP) de SOLID.
 
 **Pistas**:
-1. Crea un archivo `app/auth/services/auth_service.py` con una clase `AuthService` que contenga el método común de autenticación.
-2. Modifica `routes.py` para usar esta nueva clase y reducir la duplicación.
-
-### Escenario 3: Acoplamiento entre componentes (`app/routes/quiz_routes.py`)
-
-El archivo `quiz_routes.py` tiene un fuerte acoplamiento con las implementaciones de servicios:
-
-```python
-# En app/routes/quiz_routes.py (versión simplificada)
-# Inicialización directa de servicios
-try:
-    llm_service = LLMService()
-    logger.debug(f"LLM service initialized with model: {llm_service.model}")
-except Exception as e:
-    logger.critical(f"Failed to initialize LLM service: {str(e)}")
-    llm_service = None
-
-try:
-    retriever = Retriever()
-    logger.debug(f"Retriever service initialized with pdfs_dir: {retriever.pdfs_dir}")
-except Exception as e:
-    logger.critical(f"Failed to initialize Retriever service: {str(e)}")
-    retriever = None
-
-@router.post("/generate")
-async def generate_quiz(request: QuizRequest = Body(...), current_user: dict = Depends(get_current_user)):
-    if not llm_service:
-        raise HTTPException(status_code=500, detail="LLM service is not available")
-    if not retriever:
-        raise HTTPException(status_code=500, detail="Retriever service is not available")
-
-    # Uso directo de las instancias de servicio
-    retrieval_results = await retriever.get_chunks_by_pdf_id(request.pdf_id, current_user["username"])
-    pdf_content = "\n\n".join([chunk["text"] for chunk in retrieval_results])
-    quiz_data = llm_service.generate_quiz(pdf_content, request.num_questions, request.question_type)
-
-    # Resto del código...
-```
-
-**Tarea**: Refactoriza este código para reducir el acoplamiento aplicando el Principio de Inversión de Dependencias (DIP).
-
-**Pistas**:
-1. Crea un archivo `app/services/quiz/quiz_generator.py` con una clase `QuizGenerator` que reciba sus dependencias por inyección en el constructor.
-2. Modifica `quiz_routes.py` para crear la instancia de `QuizGenerator` y pasar las dependencias.
-3. No es necesario crear interfaces abstractas completas, solo enfócate en la inyección de dependencias.
+1. El principio DRY (Don't Repeat Yourself - No te repitas) no es parte de SOLID, pero es un principio complementario que promueve la eliminación de duplicación de código. Al eliminar esta duplicación, estarás mejorando la aplicación del SRP.
+2. La duplicación específica está en el proceso de autenticación y creación del token, que se repite en ambas funciones.
+3. Crea un archivo `app/auth/services/auth_service.py` con una clase `AuthService` que contenga el método común de autenticación.
+4. Modifica `routes.py` para usar esta nueva clase y reducir la duplicación.
 
 ## Criterios de evaluación
 
@@ -179,7 +138,7 @@ async def generate_quiz(request: QuizRequest = Body(...), current_user: dict = D
 
 ## Fecha de entrega
 
-La tarea debe ser entregada a más tardar el 27 de abril de 2025.
+La tarea debe ser entregada a más tardar el domingo 20 de abril de 2025 a las 11:00 AM.
 
 ## Recursos adicionales
 

@@ -1,10 +1,9 @@
-# Python
+# Archivos de sistema
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -16,26 +15,42 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
-# Environment variables
+# Logs y bases de datos
+*.log
+*.sql
+*.sqlite
+
+# Archivos de entorno
 .env
 .venv
 env/
 venv/
 ENV/
+env.bak/
+venv.bak/
 
-# Logs
-*.log
-logs/
+# Directorios y archivos específicos para esta asignación
+docs/demos/solution1/
+docs/demos/solution2/
+docs/guides/instructor-gitflow-guide.md
 
-# IDE specific files
+# Directorios de IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
 
 # Database files (optional - remove if you want to track these)
 # db/
