@@ -43,3 +43,6 @@ logs/
 # OS specific files
 .DS_Store
 Thumbs.db
+
+# Assignment solutions (so students don't see the answers)
+docs/assignments/solid_principles_solutions.md
