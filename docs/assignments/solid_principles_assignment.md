@@ -6,7 +6,7 @@ En esta tarea, identificarás violaciones a los principios SOLID en el código a
 
 ## Instrucciones
 
-1. Trabajarás en grupos de dos personas.
+1. Trabajarás en grupos.
 2. Cada grupo debe seleccionar **UNO** de los tres escenarios descritos a continuación.
 3. Para el escenario seleccionado:
    - Identifica qué principios SOLID se están violando
@@ -19,7 +19,9 @@ En esta tarea, identificarás violaciones a los principios SOLID en el código a
 
 ### Escenario 1: Servicio de Procesamiento de PDF (`app/routes/pdf_routes.py`)
 
-El archivo `pdf_routes.py` contiene funciones para cargar PDFs, extraer texto, dividirlo en fragmentos y más. Actualmente, todas estas responsabilidades están mezcladas dentro del archivo de rutas.
+El archivo `pdf_routes.py` contiene funciones para cargar PDFs, extraer texto, dividirlo en fragmentos y más. Actualmente, todas estas responsabilidades están mezcladas dentro del archivo de rutas. Se podria separar en archivos en 'app/services/pdf/' como por ejemplo: extractor.py (class PDFExtractor), chunker.py (class TextChunker)
+
+**Tarea**: Identifica qué principios SOLID se están violando y refactoriza este código para separar las distintas responsabilidades en clases apropiadas.
 
 Partes relevantes del código:
 
@@ -66,85 +68,26 @@ def chunk_text(pages: List[str], chunk_size: int = 1000, overlap: int = 200) -> 
 
     return chunks
 
-@router.post("/upload", response_model=PDFUploadResponse)
-async def upload_pdf(
-    file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user)
-):
-    """Upload a PDF file, extract and chunk text, create embeddings."""
-    try:
-        start_time = time.time()
-
-        # Read file content
-        pdf_content = await file.read()
-
-        # Extract text from PDF
-        pages = extract_text_from_pdf(pdf_content)
-
-        # Generate a unique ID for this PDF
-        pdf_id = str(uuid.uuid4())
-
-        # Chunk text into smaller segments
-        chunks = chunk_text(pages)
-
-        # Create embeddings for each chunk
-        chunks_with_metadata = []
-        for i, chunk in enumerate(chunks):
-            embedding = embedding_service.get_embedding(chunk["text"])
-            chunk_with_metadata = {
-                "chunk_id": str(i),
-                "text": chunk["text"],
-                "page_number": chunk["page_number"],
-                "embedding": embedding
-            }
-            chunks_with_metadata.append(chunk_with_metadata)
-
-        # Create PDF metadata
-        pdf_metadata = {
-            "pdf_id": pdf_id,
-            "filename": file.filename,
-            "upload_date": datetime.now().isoformat(),
-            "num_pages": len(pages),
-            "num_chunks": len(chunks_with_metadata)
-        }
-
-        # Save PDF information to user's library
-        save_path = await get_user_pdf_path(current_user, pdf_id)
-
-        # Ensure directory exists
-        os.makedirs(save_path, exist_ok=True)
-
-        # Save chunks with embeddings
-        with open(os.path.join(save_path, "chunks.json"), "w") as f:
-            json.dump(chunks_with_metadata, f)
-
-        # Save PDF info
-        with open(os.path.join(save_path, "pdf_info.json"), "w") as f:
-            json.dump(pdf_metadata, f)
-
-        # Update user's PDFs list
-        await add_pdf_to_user(current_user, pdf_id, file.filename)
-
-        processing_time = time.time() - start_time
-
-        return PDFUploadResponse(
-            pdf_id=pdf_id,
-            filename=file.filename,
-            num_pages=len(pages),
-            num_chunks=len(chunks_with_metadata),
-            processing_time=processing_time
-        )
-
-    except Exception as e:
-        print(f"Error processing PDF: {e}")
-        raise HTTPException(status_code=500, detail=f"Error processing PDF: {str(e)}")
 ```
 
-**Tarea**: Identifica qué principios SOLID se están violando y refactoriza este código para separar las distintas responsabilidades en clases apropiadas.
+
 
 ### Escenario 2: Servicios de IA en Rutas (`app/routes/quiz_routes.py`)
 
-El archivo `quiz_routes.py` inicializa y utiliza servicios directamente, creando un acoplamiento fuerte:
+El archivo `quiz_routes.py` inicializa y utiliza servicios directamente, creando un acoplamiento fuerte.
+Refactoriza aplicando DIP y mejorando la estructura para cumplir con OCP, crear las clases en: app/services/interfaces.py
+Ejemplo:
+from abc import ABC, abstractmethod
+class LLMServiceInterface(ABC):
+    """Interface for LLM service interactions."""
+
+class RetrieverInterface(ABC):
+    """Interface for content retrieval operations."""
+
+Crear las clases que heredan de las interfaces en: app/services/quiz_generator.py
+
+class QuizGenerator:
+    """Service for generating quizzes from PDF content."""
 
 ```python
 # En app/routes/quiz_routes.py
