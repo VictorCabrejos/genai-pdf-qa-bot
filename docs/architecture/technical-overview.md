@@ -57,7 +57,7 @@ The application follows a **Service-Oriented MVC (Model-View-Controller)** archi
 ### AI and Data Processing
 - **OpenAI API**: Provides access to powerful language models
   - GPT-4o-mini: Used for natural language understanding and generation
-  - text-embedding-ada-002: Used for creating vector embeddings
+  - text-embedding-3-small: Used for creating vector embeddings (more efficient than the older text-embedding-ada-002)
 - **PyPDF2/pdf2image**: PDF processing and text extraction
 - **NumPy**: Numerical operations for vector similarity calculations
 
