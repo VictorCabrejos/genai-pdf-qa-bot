@@ -124,7 +124,20 @@ HOST=0.0.0.0
 
 Replace placeholders with your actual values.
 
+> **Purpose of the .env File**: The `.env` file contains configuration variables that the application needs to run properly, including your OpenAI API key, database connection details, and security settings. This file keeps sensitive information out of the codebase and allows for easy configuration without changing code.
+
 > **Security Note**: Never commit your `.env` file to version control. The `.gitignore` file should already be configured to exclude it.
+
+### Alternative Database Setup
+
+If you have trouble setting up PostgreSQL, the application can fall back to using SQLite:
+
+1. In your `.env` file, don't include the `DATABASE_URL` line, or set it to:
+   ```
+   DATABASE_URL=sqlite:///./pdf_qa.db
+   ```
+
+2. This will create a local SQLite database file in the project root directory. This is simpler to set up but offers reduced performance compared to PostgreSQL.
 
 ## Step 7: Run Database Migrations
 

@@ -109,8 +109,22 @@ For a deeper understanding of the system architecture, please see our [Technical
 
 1. Clone the repository
 2. Install dependencies with `pip install -r requirements.txt`
-3. Configure your OpenAI API key in a `.env` file
-4. Run with `uvicorn app.main:app --reload`
+3. Configure your `.env` file:
+   ```
+   # Required: Your OpenAI API key
+   OPENAI_API_KEY=your_api_key_here
+
+   # Optional: Database configuration (defaults to SQLite if not specified)
+   DATABASE_URL=postgresql://username:password@localhost/pdf_qa_bot
+
+   # Optional: Model selection (defaults shown)
+   OPENAI_MODEL=gpt-4o-mini
+   EMBEDDING_MODEL=text-embedding-3-small
+   ```
+4. Run database migrations with `alembic upgrade head`
+5. Start the application with `uvicorn app.main:app --reload`
+
+> **Database Note**: The application supports both PostgreSQL (recommended for production) and SQLite (simpler for development). If no DATABASE_URL is provided, it will default to using a local SQLite database.
 
 For detailed setup instructions, particularly for students and new developers, please refer to our [Student Setup Guide](docs/guides/student-setup-guide.md).
 

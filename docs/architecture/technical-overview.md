@@ -62,9 +62,28 @@ The application follows a **Service-Oriented MVC (Model-View-Controller)** archi
 - **NumPy**: Numerical operations for vector similarity calculations
 
 ### Data Storage
-- **File-based storage**: JSON files for document storage and vector embeddings
+- **PostgreSQL Database** (Current Implementation):
+  - Relational database for structured data storage
+  - pgvector extension for vector embedding storage
+  - Scalable solution with improved query performance
+  - Introduced in April 2025 migration
+
+- **File-based storage** (Original Implementation):
+  - JSON files for document storage and vector embeddings
   - Simple implementation suitable for prototype/educational contexts
-  - Can be replaced with databases for production use
+  - Used until April 2025 migration to PostgreSQL
+
+### Database Migration
+- **Transition Date**: April 15, 2025
+- **Primary Benefits**:
+  - Improved scalability for larger document collections
+  - Enhanced query performance and data integrity
+  - Support for concurrent users and operations
+  - Simplified backup and recovery procedures
+- **Migration Tools**:
+  - SQLAlchemy ORM for database interactions
+  - Alembic for database schema migrations
+  - pgvector extension for efficient vector operations
 
 ### Authentication
 - **JWT (JSON Web Tokens)**: Stateless authentication mechanism
@@ -77,16 +96,28 @@ The application follows a **Service-Oriented MVC (Model-View-Controller)** archi
 The Model layer represents the application data and business rules.
 
 #### Key Components:
+- **SQLAlchemy Models** (`app/database.py`, Current Implementation)
+  - ORM-based models for database entities
+  - Relationship definitions between tables
+  - Type validation and constraints
+  - Introduced with PostgreSQL migration (April 2025)
+
 - **Pydantic Schemas** (`models/pydantic_schemas.py`)
   - Define data structures for request/response validation
   - Ensure type safety and data integrity
 
-- **Database Structure** (`db/` directory)
-  - `users.json`: User credentials and profile information
-  - `pdfs/`: Directory containing uploaded PDFs and their metadata
-    - Each PDF has its own directory with:
-      - `chunks.json`: Text chunks with vector embeddings
-      - `pdf_info.json`: Metadata about the document
+- **Database Structure**
+  - **PostgreSQL Database** (Current Implementation):
+    - Relational tables for users, documents, chunks, quizzes, etc.
+    - pgvector extension for efficient embedding storage
+    - Foreign key constraints for data integrity
+
+  - **File-based Structure** (Original Implementation, pre-April 2025):
+    - `users.json`: User credentials and profile information
+    - `pdfs/` directory: Uploaded PDFs and their metadata
+      - Each PDF had its own directory with:
+        - `chunks.json`: Text chunks with vector embeddings
+        - `pdf_info.json`: Metadata about the document
 
 ### View Layer
 The View layer handles the presentation and user interface.
@@ -232,9 +263,43 @@ Vector search finds the most similar documents to a query by comparing their vec
 2. This vector is compared to all document chunk vectors using cosine similarity
 3. The most similar chunks are retrieved as context for the answer
 
-**Implementation in code:**
+**Implementation in code (PostgreSQL-based, current):**
 ```python
-# From app/services/retriever.py
+# From app/services/retriever.py (After April 2025 migration)
+async def search(self, pdf_id, query, top_k=5, db=None):
+    """
+    Search for chunks relevant to a query using semantic similarity with PostgreSQL.
+
+    Args:
+        pdf_id: The ID of the PDF to search in
+        query: The search query
+        top_k: Number of top results to return
+        db: Database session
+
+    Returns:
+        List of most relevant text chunks
+    """
+    # Generate embedding for the query
+    query_embedding = await self.embedding_service.generate_embedding(query)
+
+    # Find document in the database
+    document = db.query(Document).filter(Document.pdf_id == pdf_id).first()
+    if not document:
+        return []
+
+    # Query chunks using vector similarity operation (with pgvector)
+    # This uses the vector similarity operator in PostgreSQL
+    chunks = db.query(Chunk).filter(Chunk.document_id == document.id)\
+              .order_by(Chunk.embedding.cosine_distance(query_embedding))\
+              .limit(top_k).all()
+
+    # Return the chunks with their text content
+    return [{"text": chunk.text, "page_number": chunk.page_number} for chunk in chunks]
+```
+
+**Original file-based implementation (pre-April 2025):**
+```python
+# From app/services/retriever.py (Original version)
 async def search(self, pdf_id, query, top_k=5):
     """
     Search for chunks relevant to a query using semantic similarity.
@@ -370,6 +435,66 @@ async def generate_quiz(request: QuizRequest, current_user: dict):
     return {"quiz_id": quiz_id, "questions": response["questions"]}
 ```
 
+### SQLAlchemy ORM Integration
+**What is SQLAlchemy ORM?**
+SQLAlchemy ORM (Object-Relational Mapping) is a library that facilitates communication between Python objects and database tables, introduced during the PostgreSQL migration.
+
+**Why it's important:**
+1. Abstracts database operations behind Python object interfaces
+2. Promotes clean, maintainable code through class-based models
+3. Provides powerful query capabilities through the ORM API
+4. Handles database connections, transactions, and session management
+
+**Implementation in code:**
+```python
+# From app/database.py
+from sqlalchemy import Column, Integer, String, ForeignKey, Text, DateTime, Boolean
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, relationship
+
+Base = declarative_base()
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(String, primary_key=True)
+    username = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True)
+    password = Column(String)
+    created_at = Column(DateTime, default=func.now())
+
+    # Relationships
+    pdfs = relationship("PDF", back_populates="user")
+
+class PDF(Base):
+    __tablename__ = "pdfs"
+
+    id = Column(String, primary_key=True)
+    user_id = Column(String, ForeignKey("users.id"))
+    title = Column(String)
+    filename = Column(String)
+    created_at = Column(DateTime, default=func.now())
+    file_path = Column(String)
+
+    # Relationships
+    user = relationship("User", back_populates="pdfs")
+    chunks = relationship("PDFChunk", back_populates="pdf")
+
+class PDFChunk(Base):
+    __tablename__ = "pdf_chunks"
+
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    pdf_id = Column(String, ForeignKey("pdfs.id"))
+    content = Column(Text)
+    page_number = Column(Integer)
+    embedding_file = Column(String, nullable=True)
+
+    # Relationships
+    pdf = relationship("PDF", back_populates="chunks")
+```
+
 ## Authentication and Security
 
 The application implements a robust authentication system using JWTs:
@@ -430,7 +555,8 @@ def get_current_user(authorization: str = Header(...)):
    |
 4. Each chunk is converted to vector embeddings
    |
-5. Chunks and embeddings are stored in the database
+5. Chunks and embeddings are stored in the PostgreSQL database
+   (Previously stored in JSON files before April 2025 migration)
 ```
 
 ### Question Answering Flow
@@ -559,3 +685,4 @@ The GenAI PDF Q&A Bot transforms static document repositories into interactive k
 ---
 
 *Created: April 10, 2025*
+*Updated: April 15, 2025 (PostgreSQL Migration)*
