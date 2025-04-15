@@ -40,6 +40,9 @@ docs/demos/solution1/
 docs/demos/solution2/
 docs/guides/instructor-gitflow-guide.md
 
+# Ignore class demo folder
+docs/class_demo/
+
 # Directorios de IDE
 .idea/
 .vscode/
@@ -61,3 +64,5 @@ Thumbs.db
 
 # Assignment solutions (so students don't see the answers)
 docs/assignments/solid_principles_solutions.md
+
+genai-pdf-qa-bot report.txt

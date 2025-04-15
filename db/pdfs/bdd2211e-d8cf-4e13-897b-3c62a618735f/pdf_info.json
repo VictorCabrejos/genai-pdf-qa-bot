@@ -1,10 +1,43 @@
 {
-  "84890d2d-cac3-4e89-9a01-825eb44caf2c": {
-    "pdf_id": "84890d2d-cac3-4e89-9a01-825eb44caf2c",
-    "filename": "5 Blog Posts To Become a RAG Master.pdf",
-    "upload_date": "2025-04-10T23:25:20.285851",
-    "num_pages": 7,
-    "num_chunks": 12,
-    "conversation_history": []
+  "7b0cc3bc-efad-475e-a202-e531322d5a5c": {
+    "pdf_id": "7b0cc3bc-efad-475e-a202-e531322d5a5c",
+    "filename": "Silabo URP MII-103_Dise\u00f1o de Software.pdf",
+    "upload_date": "2025-04-13T14:10:12.517274",
+    "num_pages": 5,
+    "num_chunks": 11,
+    "conversation_history": [
+      {
+        "question": "hay algun curso de patrones",
+        "answer": "S\u00ed, hay un curso de patrones de dise\u00f1o que forma parte del curso de Dise\u00f1o de Software I, donde se abordan patrones de dise\u00f1o a nivel estrat\u00e9gico y t\u00e1ctico.",
+        "timestamp": "2025-04-13T14:10:27.586074",
+        "sources": [
+          {
+            "text": "\u2022 \nPresentaci\u00f3n del curso \n\u2022 \nIntroducci\u00f3n a los principios del dise\u00f1o de software \n\u2022 \nHerramientas y entornos de desarrollo \n2 \nFundamentos de Estilos de Dise\u00f1o \n\u2022 \nDefinici\u00f3n y clasificaci\u00f3n de estilos de dise\u00f1o \n\u2022 \nEjemplos pr\u00e1cticos de estilos de dise\u00f1o \n3 \n \nPatrones de Dise\u00f1o a Nivel Estrat\u00e9gico \n\u2022 \nIntroducci\u00f3n a patrones de dise\u00f1o \n\u2022 \nPatrones de dise\u00f1o estrat\u00e9gicos: Singleton, Factory, y Prototype \n4 \nAplicaci\u00f3n de Patrones Estrat\u00e9gicos \n\u2022 \nEjercicios y casos pr\u00e1cticos sobre patrones estrat\u00e9gicos \n\u2022 \nDiscusi\u00f3n de ventajas y desventajas ise\u00f1o estrat\u00e9gicos: Singleton, Factory, y Prototype \n4 \nAplicaci\u00f3n de Patrones Estrat\u00e9gicos \n\u2022 \nEjercicios y casos pr\u00e1cticos sobre patrones estrat\u00e9gicos \n\u2022 \nDiscusi\u00f3n de ventajas y desventajas",
+            "page_number": 2,
+            "score": 0.5132925674284033
+          },
+          {
+            "text": "e software en un nivel fundamental, preparando a los \nestudiantes para el dise\u00f1o de software dirigido por el dominio del negocio. El desarrollo del curso \ncomprende: Fundamentos de estilos y patrones de dise\u00f1o a nivel estrat\u00e9gico y t\u00e1ctico para sistemas \nescalables, flexibles y de alta disponibilidad centrados en el dominio, aplicando enfoques, t\u00e9cnicas \ny herramientas para el dise\u00f1o iterativo y colaborativo de soluciones de software.  Durante el curso \nel estudiante investiga y desarrolla habilidades pr\u00e1cticas a trav\u00e9s de proyectos aplicados, con un \nenfoque en la \u00e9tica y la privacidad de datos de ser el caso. Asimismo, analiza, sintetiza y presenta \nun art\u00edculo de investigaci\u00f3n relacionado al curso. \n \n \nIII. COMPETENCIAS GEN\u00c9RICAS A LAS QUE CONTRIBUYE LA ASIGNATURA \na) Pensamiento cr\u00edtico y creativo. El curso fomenta la creaci\u00f3n de nuevos algoritmos a partir \nde los ya existentes. \nb) Autoaprendizaje. Los proyectos que se desarrollan en el curso inciden en la investigaci\u00f3n y \nel aut",
+            "page_number": 1,
+            "score": 0.4873831640494864
+          },
+          {
+            "text": "UNIDAD 2:  \nLOGRO DE APRENDIZAJE: El estudiante implementar\u00e1 patrones de dise\u00f1o a nivel \nt\u00e1ctico y aplicar\u00e1 principios de escalabilidad y modularidad mediante c\u00f3digo limpio y \nestructurado, empleando buenas pr\u00e1cticas profesionales. \n \nSemana \nContenido \n5 \nPatrones de Dise\u00f1o a Nivel T\u00e1ctico \n\u2022 \nPatrones de dise\u00f1o t\u00e1cticos: Adapter, Decorator, y Facade \n\u2022 \nEjemplos y aplicaciones pr\u00e1cticas \n6 \nDise\u00f1o de Sistemas Escalables y Flexibles \n\u2022 \nPrincipios de escalabilidad y flexibilidad en el dise\u00f1o de software \n\u2022 \nEstrategias y t\u00e9cnicas para sistemas escalables \n7 \n \nRevisi\u00f3n y Preparaci\u00f3n para el Examen \n\u2022 \nRevisi\u00f3n de conceptos clave \n\u2022 \nResoluci\u00f3n de dudas y pr\u00e1ctica \n8 \nExamen Parcial \n \n \nUNIDAD 3:  \nLOGRO DE APRENDIZAJE: El estudiante aplicar\u00e1 el enfoque de dise\u00f1o dirigido por el \ndominio (DDD) e implementar\u00e1 soluciones colaborativas e iterativas que respeten \nprincipios \u00e9ticos y t\u00e9cnicos del desarrollo moderno de software. \n \n \nSemana \nContenido \n9 \nDise\u00f1o Centrado en el Dominio \n\u2022",
+            "page_number": 3,
+            "score": 0.4724855682117087
+          },
+          {
+            "text": "S\u00cdLABO \n \nEscuela de Posgrado \nMaestr\u00eda en ingenier\u00eda Inform\u00e1tica con menci\u00f3n en Ingenier\u00eda de Software \n \nI. DATOS ADMINISTRATIVOS \n1. Asignatura \n : Dise\u00f1o de Software I \n2. C\u00f3digo \n : MII-103 \n3. Naturaleza \n : Te\u00f3rico/pr\u00e1ctica \n4. Condici\u00f3n \n : Obligatoria \n5. Requisito \n : Ninguna \n6. N\u00famero de cr\u00e9ditos \n : 4 \n7. N\u00famero de horas semanales : 4 Horas Te\u00f3ricas y 2 Horas de Pr\u00e1ctica \n8. Semestre acad\u00e9mico \n : 2025-I \n9. Docente \n :  V\u00edctor Cabrejos Yal\u00e1n \n10. Correo electr\u00f3nico                : victor.cabrejos@urp.edu.pe \n \n:   \nII. SUMILLA \n \nEl curso de Dise\u00f1o de Software I constituye un curso de formaci\u00f3n espec\u00edfica, de car\u00e1cter te\u00f3rico \npr\u00e1ctico. Proporciona a los estudiantes conocimientos, habilidades y herramientas necesarias para \nabordar los principios y patrones de dise\u00f1o de software en un nivel fundamental, preparando a los \nestudiantes para el dise\u00f1o de software dirigido por el dominio del negocio. El desarrollo del curso \ncomprende: Fundamentos de estilos y patrones",
+            "page_number": 1,
+            "score": 0.46441282222394215
+          },
+          {
+            "text": "ION (X) RESPONSABILIDAD SOCIAL (X) \n \nVI. LOGRO DE LA ASIGNATURA \nAl terminar el ciclo acad\u00e9mico, el estudiante ser\u00e1 capaz de dise\u00f1ar soluciones de software \nescalables, modulares y \u00e9ticas aplicando principios de ingenier\u00eda de software, patrones de dise\u00f1o \nestrat\u00e9gicos y t\u00e1cticos, y buenas pr\u00e1cticas de programaci\u00f3n en Python, con enfoque en proyectos \nalineados a su tesis. \n \nVII. PROGRAMACI\u00d3N DE CONTENIDOS \n \nUNIDAD 1: Fundamentos de Estilos y Patrones de Dise\u00f1o \nLOGRO DE APRENDIZAJE: El estudiante identificar\u00e1 los fundamentos de los estilos \nde dise\u00f1o y aplicar\u00e1 patrones estrat\u00e9gicos b\u00e1sicos en el desarrollo de software orientado a \ndominios reales, haciendo uso de herramientas modernas de programaci\u00f3n y control de \nversiones. \n \nSemana \nContenido \n1 \nIntroducci\u00f3n al Dise\u00f1o de Software \n\u2022 \nPresentaci\u00f3n del curso \n\u2022 \nIntroducci\u00f3n a los principios del dise\u00f1o de software \n\u2022 \nHerramientas y entornos de desarrollo \n2 \nFundamentos de Estilos de Dise\u00f1o \n\u2022 \nDefinici\u00f3n y clasificaci\u00f3n de esti",
+            "page_number": 2,
+            "score": 0.45798669707314865
+          }
+        ]
+      }
+    ]
   }
 }
