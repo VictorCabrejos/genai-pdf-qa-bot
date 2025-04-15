@@ -9,6 +9,8 @@ from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv
+from sqlalchemy.orm import Session
+from ..database import get_db, User, PDF, PDFChunk, Conversation, Message, Quiz
 from models.pydantic_schemas import UserResponse, PDFInfo, ConversationItem
 
 # Load environment variables
@@ -25,74 +27,80 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # OAuth2 token URL
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
-# Database file paths
+# Base directory for file storage (used for PDF files)
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-DB_DIR = BASE_DIR / "db"
-USERS_FILE = DB_DIR / "users.json"
-PDFS_DIR = DB_DIR / "pdfs"
+PDFS_DIR = BASE_DIR / "db" / "pdfs"
+PDFS_DIR.mkdir(exist_ok=True, parents=True)
 
-# Create database directories if they don't exist
-DB_DIR.mkdir(exist_ok=True)
-PDFS_DIR.mkdir(exist_ok=True)
-
-# Initialize empty users database if it doesn't exist
-if not USERS_FILE.exists():
-    with open(USERS_FILE, "w") as f:
-        json.dump({}, f)
-
-
-def get_users_db():
-    """Get the users database from the JSON file."""
-    try:
-        with open(USERS_FILE, "r") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, FileNotFoundError):
-        return {}
-
-
-def save_users_db(users_db):
-    """Save the users database to the JSON file."""
-    with open(USERS_FILE, "w") as f:
-        json.dump(users_db, f, indent=2)
-
-
+# Database functions using SQLAlchemy
 def verify_password(plain_password, hashed_password):
     """Verify if the plain password matches the hashed password."""
     return pwd_context.verify(plain_password, hashed_password)
-
 
 def get_password_hash(password):
     """Generate a hashed password."""
     return pwd_context.hash(password)
 
+def get_user_by_username(db: Session, username: str):
+    """Get a user by username from the database."""
+    return db.query(User).filter(User.username == username).first()
 
-def get_user(username: str):
-    """Get a user by username or email."""
-    users_db = get_users_db()
+def get_user_by_email(db: Session, email: str):
+    """Get a user by email from the database."""
+    return db.query(User).filter(User.email == email).first()
+
+def get_user(username: str, db: Session = Depends(get_db)):
+    """Get a user by username or email from the database."""
     # Check if username exists directly
-    if username in users_db:
-        user_data = users_db[username]
-        user_data["username"] = username
-        return user_data
+    user = get_user_by_username(db, username)
+    if user:
+        return {
+            "user_id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "hashed_password": user.password,
+            "full_name": user.username  # Add a full_name field to User model if needed
+        }
 
     # Check if email matches any user
-    for user_name, user_data in users_db.items():
-        if user_data.get("email") == username:
-            user_data["username"] = user_name
-            return user_data
+    user = get_user_by_email(db, username)
+    if user:
+        return {
+            "user_id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "hashed_password": user.password,
+            "full_name": user.username  # Add a full_name field to User model if needed
+        }
 
     return None
 
+def create_user_db(db: Session, username: str, email: str, password: str, full_name: str = None):
+    """Create a new user in the database."""
+    user_id = str(uuid.uuid4())
+    hashed_password = get_password_hash(password)
 
-def authenticate_user(username: str, password: str):
+    user = User(
+        id=user_id,
+        username=username,
+        email=email,
+        password=hashed_password
+    )
+
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    return user
+
+def authenticate_user(username: str, password: str, db: Session = Depends(get_db)):
     """Authenticate a user with username/email and password."""
-    user = get_user(username)
+    user = get_user(username, db)
     if not user:
         return False
     if not verify_password(password, user["hashed_password"]):
         return False
     return user
-
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Create a JWT access token."""
@@ -107,8 +115,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     """Get the current authenticated user from the JWT token."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -124,12 +131,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise credentials_exception
 
-    user = get_user(username)
+    user = get_user(username, db)
     if user is None:
         raise credentials_exception
 
     return user
-
 
 # PDF Management Functions
 def get_user_pdf_path(user_id: str):
@@ -138,88 +144,93 @@ def get_user_pdf_path(user_id: str):
     user_pdf_dir.mkdir(exist_ok=True)
     return user_pdf_dir
 
+def get_user_pdfs(user_id: str, db: Session = Depends(get_db)) -> Dict[str, PDFInfo]:
+    """Get all PDFs info for a user from the database."""
+    # Add debug logging
+    pdfs = db.query(PDF).filter(PDF.user_id == user_id).all()
+    print(f"Found {len(pdfs)} PDFs for user {user_id}")
 
-def get_user_pdf_info_path(user_id: str):
-    """Get the path to a user's PDF info file."""
-    return get_user_pdf_path(user_id) / "pdf_info.json"
+    result = {}
+    for pdf in pdfs:
+        print(f"Processing PDF: {pdf.id}, {pdf.filename}")
+        # Get conversations for this PDF
+        conversations = []
+        db_conversations = db.query(Conversation).filter(Conversation.pdf_id == pdf.id).all()
 
+        for convo in db_conversations:
+            messages = db.query(Message).filter(Message.conversation_id == convo.id).order_by(Message.timestamp).all()
 
-def get_user_pdfs(user_id: str) -> Dict[str, PDFInfo]:
-    """Get all PDFs info for a user."""
-    pdf_info_path = get_user_pdf_info_path(user_id)
+            # Group messages into question/answer pairs
+            for i in range(0, len(messages), 2):
+                if i + 1 < len(messages):
+                    question = messages[i].content
+                    answer = messages[i+1].content
 
-    if not pdf_info_path.exists():
-        return {}
+                    conversations.append(ConversationItem(
+                        question=question,
+                        answer=answer,
+                        timestamp=messages[i].timestamp.isoformat(),
+                        sources=[]  # Sources handling would need additional implementation
+                    ))
 
-    try:
-        with open(pdf_info_path, "r") as f:
-            pdf_info_dict = json.load(f)
+        # Count chunks
+        num_chunks = db.query(PDFChunk).filter(PDFChunk.pdf_id == pdf.id).count()
 
-        # Convert json to PDFInfo objects
-        result = {}
-        for pdf_id, info in pdf_info_dict.items():
-            # Convert conversation history items
-            conversations = []
-            for convo in info.get("conversation_history", []):
-                conversations.append(ConversationItem(**convo))
+        # Calculate num_pages by counting unique page numbers in chunks
+        distinct_pages = db.query(PDFChunk.page_number).filter(PDFChunk.pdf_id == pdf.id).distinct().count()
+        # Use at least 1 page if no chunks have page numbers
+        num_pages = max(1, distinct_pages)
 
-            # Create PDFInfo object
-            result[pdf_id] = PDFInfo(
-                pdf_id=pdf_id,
-                filename=info["filename"],
-                upload_date=info["upload_date"],
-                num_pages=info["num_pages"],
-                num_chunks=info["num_chunks"],
-                conversation_history=conversations
-            )
+        result[pdf.id] = PDFInfo(
+            pdf_id=pdf.id,
+            filename=pdf.filename,
+            upload_date=pdf.created_at.isoformat(),
+            num_pages=num_pages,
+            num_chunks=num_chunks,
+            conversation_history=conversations
+        )
 
-        return result
-    except (json.JSONDecodeError, FileNotFoundError):
-        return {}
-
-
-def save_user_pdfs(user_id: str, pdfs: Dict[str, PDFInfo]):
-    """Save PDF info for a user."""
-    pdf_info_path = get_user_pdf_info_path(user_id)
-
-    # Convert PDFInfo objects to dictionaries
-    pdf_dict = {}
-    for pdf_id, pdf_info in pdfs.items():
-        pdf_dict[pdf_id] = pdf_info.dict()
-
-    with open(pdf_info_path, "w") as f:
-        json.dump(pdf_dict, f, indent=2)
-
+    return result
 
 def add_conversation_to_pdf(
     user_id: str,
     pdf_id: str,
     question: str,
     answer: str,
-    sources: list
+    sources: list,
+    db: Session = Depends(get_db)
 ):
-    """Add a conversation item to a PDF's history."""
-    pdfs = get_user_pdfs(user_id)
-
-    if pdf_id not in pdfs:
+    """Add a conversation item to a PDF's history in the database."""
+    # Check if PDF exists and belongs to the user
+    pdf = db.query(PDF).filter(PDF.id == pdf_id, PDF.user_id == user_id).first()
+    if not pdf:
         return False
 
-    # Create conversation item
-    convo_item = ConversationItem(
-        question=question,
-        answer=answer,
-        timestamp=datetime.now().isoformat(),
-        sources=sources
+    # Create a new conversation
+    conversation_id = str(uuid.uuid4())
+    conversation = Conversation(
+        id=conversation_id,
+        user_id=user_id,
+        pdf_id=pdf_id
     )
+    db.add(conversation)
 
-    # Add to PDF's conversation history
-    pdf_info = pdfs[pdf_id]
-    if not hasattr(pdf_info, "conversation_history") or pdf_info.conversation_history is None:
-        pdf_info.conversation_history = []
+    # Add question message
+    question_msg = Message(
+        conversation_id=conversation_id,
+        is_user=True,
+        content=question
+    )
+    db.add(question_msg)
 
-    pdf_info.conversation_history.append(convo_item)
+    # Add answer message
+    answer_msg = Message(
+        conversation_id=conversation_id,
+        is_user=False,
+        content=answer
+    )
+    db.add(answer_msg)
 
-    # Save updated PDFs
-    save_user_pdfs(user_id, pdfs)
+    db.commit()
 
     return True

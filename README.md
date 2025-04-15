@@ -1,5 +1,7 @@
 # 🧠 GenAI PDF Q&A Bot
 
+> **🔄 UPDATED: April 15, 2025** - Major database migration from file-based storage to PostgreSQL, improving scalability and performance. [View the full migration report](docs/architecture/database-migration-report.md).
+
 A sophisticated AI-powered platform for document analysis, question answering, and quiz generation. This system leverages advanced natural language processing techniques including vector embeddings, semantic search, and large language models to transform static PDF documents into interactive knowledge bases.
 
 ## 🚀 Project Evolution
@@ -19,6 +21,13 @@ This project is continuously evolving through planned development phases:
 - Answer validation and explanation generation
 - Interactive quiz interface with scoring
 - Customizable difficulty levels
+
+### Phase 2.5: ✅ Database Migration (Completed)
+- Migration from file-based storage to PostgreSQL database
+- Enhanced data integrity and relational data management
+- Improved performance for concurrent users
+- Better scalability for increasing document collections
+- Animated landing page with interactive PDF robot visualization
 
 ### Phase 3: 🔄 Advanced Analytics (Planned)
 - Document comprehension metrics
@@ -157,6 +166,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 .
 ├── app/               # Application code
 │   ├── main.py        # Entry point
+│   ├── database.py    # Database connection and models
 │   ├── routes/        # API endpoints
 │   │   ├── pdf_routes.py
 │   │   └── quiz_routes.py
@@ -166,10 +176,15 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 │       └── retriever.py    # Document storage and retrieval
 ├── docs/              # Documentation
 │   ├── architecture/  # System design docs
+│   ├── bug-reports/   # Bug documentation
 │   └── guides/        # User and developer guides
+├── migrations/        # Alembic database migrations
 ├── models/            # Data models
 ├── templates/         # Frontend templates
 ├── static/            # Static assets
+│   ├── css/           # Stylesheets
+│   ├── js/            # JavaScript files
+│   └── images/        # Image assets
 └── tests/             # Unit and integration tests
 ```
 

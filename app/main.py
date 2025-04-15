@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Request, Body
+from fastapi import FastAPI, HTTPException, Request, Body, Depends
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -11,6 +11,8 @@ import os
 import logging
 import traceback
 from dotenv import load_dotenv
+from .database import create_tables, get_db
+from sqlalchemy.orm import Session
 
 # Configure logging
 logging.basicConfig(
@@ -35,6 +37,9 @@ if not api_key:
     print("Warning: OPENAI_API_KEY environment variable not set. Set this in .env file.")
 else:
     print(f"API key loaded successfully in main app: {api_key[:5]}...{api_key[-4:]}")
+
+# Create tables in the database
+create_tables()
 
 # Create templates and static paths
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))

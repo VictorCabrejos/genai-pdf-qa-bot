@@ -2,63 +2,53 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from datetime import timedelta
 import uuid
+from sqlalchemy.orm import Session
 
 from models.pydantic_schemas import UserCreate, UserResponse, Token, UserLogin
+from ..database import get_db, User
 from .utils import (
-    get_user, authenticate_user, create_access_token,
-    get_password_hash, get_users_db, save_users_db,
-    ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user
+    authenticate_user, create_access_token,
+    get_password_hash, get_user_by_username, get_user_by_email,
+    create_user_db, ACCESS_TOKEN_EXPIRE_MINUTES, get_current_user
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_user(user: UserCreate):
+async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     """Register a new user"""
-    users_db = get_users_db()
-
     # Check if username already exists
-    if user.username in users_db:
+    existing_user = get_user_by_username(db, user.username)
+    if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already registered"
         )
 
     # Check if email already exists
-    for existing_user in users_db.values():
-        if existing_user.get("email") == user.email:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered"
-            )
+    existing_email = get_user_by_email(db, user.email)
+    if existing_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
 
     # Create new user with hashed password
-    user_id = str(uuid.uuid4())
-    hashed_password = get_password_hash(user.password)
-
-    users_db[user.username] = {
-        "user_id": user_id,
-        "email": user.email,
-        "full_name": user.full_name,
-        "hashed_password": hashed_password,
-        "pdfs": []
-    }
-
-    save_users_db(users_db)
+    new_user = create_user_db(db, user.username, user.email, user.password, user.full_name)
 
     return {
-        "user_id": user_id,
-        "username": user.username,
-        "email": user.email,
+        "user_id": new_user.id,
+        "username": new_user.username,
+        "email": new_user.email,
         "full_name": user.full_name
     }
 
 
 @router.post("/login", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """Authenticate user and provide access token"""
-    user = authenticate_user(form_data.username, form_data.password)
+    user = authenticate_user(form_data.username, form_data.password, db)
 
     if not user:
         raise HTTPException(
@@ -78,9 +68,9 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 
 @router.post("/login/json", response_model=Token)
-async def login_json(user_data: UserLogin):
+async def login_json(user_data: UserLogin, db: Session = Depends(get_db)):
     """Authenticate user with JSON request and provide access token"""
-    user = authenticate_user(user_data.username, user_data.password)
+    user = authenticate_user(user_data.username, user_data.password, db)
 
     if not user:
         raise HTTPException(

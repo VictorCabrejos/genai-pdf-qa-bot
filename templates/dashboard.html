@@ -160,6 +160,7 @@
             // Fetch PDF library
             async function fetchPdfLibrary() {
                 try {
+                    console.log('Fetching PDF library...');
                     const response = await fetch('/api/library', {
                         headers: {
                             'Authorization': `Bearer ${token}`
@@ -170,16 +171,28 @@
                         throw new Error('Failed to fetch PDF library');
                     }
 
-                    const pdfs = await response.json();
+                    const data = await response.json();
+                    console.log('PDF library response:', data);
+
+                    // Convert to array if object is returned (key-value to array)
+                    let pdfs = data;
+                    if (data && typeof data === 'object' && !Array.isArray(data)) {
+                        console.log('Converting object to array...');
+                        pdfs = Object.values(data);
+                    }
+
+                    console.log('Processed PDFs:', pdfs);
 
                     // Hide loading indicator
                     loadingLibrary.classList.add('hidden');
 
                     // Show empty state or PDF library
-                    if (pdfs.length === 0) {
+                    if (!pdfs || pdfs.length === 0) {
+                        console.log('PDF library is empty');
                         emptyLibrary.classList.remove('hidden');
                         pdfLibrary.classList.add('hidden'); // Ensure PDF library is hidden
                     } else {
+                        console.log('Rendering PDF library with', pdfs.length, 'PDFs');
                         emptyLibrary.classList.add('hidden'); // Ensure empty message is hidden
                         pdfLibrary.classList.remove('hidden');
                         renderPdfLibrary(pdfs);

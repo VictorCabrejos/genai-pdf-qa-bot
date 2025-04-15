@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: pdf-qa-bot
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app/main.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: USE_POSTGRES
+        value: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pdf-qa-bot-db
+          property: connectionString
+
+databases:
+  - name: pdf-qa-bot-db
+    plan: free
+    databaseName: pdf_qa_bot
+    user: pdf_qa_bot_user

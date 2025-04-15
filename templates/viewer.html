@@ -295,8 +295,19 @@
                         throw new Error('Failed to fetch PDF library');
                     }
 
-                    const pdfs = await pdfsResponse.json();
+                    const pdfsData = await pdfsResponse.json();
+                    console.log('PDF library data:', pdfsData);
+
+                    // Convert pdfs data to array if it's an object (key-value pairs)
+                    let pdfs = pdfsData;
+                    if (pdfsData && typeof pdfsData === 'object' && !Array.isArray(pdfsData)) {
+                        console.log('Converting PDF object to array...');
+                        pdfs = Object.values(pdfsData);
+                    }
+
+                    console.log('Looking for PDF with ID:', pdfId);
                     pdfInfo = pdfs.find(pdf => pdf.pdf_id === pdfId);
+                    console.log('Found PDF info:', pdfInfo);
 
                     if (!pdfInfo) {
                         throw new Error('PDF not found');

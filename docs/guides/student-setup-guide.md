@@ -1,5 +1,7 @@
 # Student Setup Guide for GenAI PDF Q&A Bot
 
+> **Updated: April 15, 2025** - This guide now includes PostgreSQL setup instructions following the database migration.
+
 This guide will walk you through the process of setting up and running the GenAI PDF Q&A Bot project on your local machine. Follow these steps carefully to ensure you have a working development environment.
 
 ## Prerequisites
@@ -8,6 +10,7 @@ Before you begin, make sure you have the following software installed on your co
 
 - **Python 3.11** or higher ([Download Python](https://www.python.org/downloads/))
 - **Git** ([Download Git](https://git-scm.com/downloads))
+- **PostgreSQL 14+** ([Download PostgreSQL](https://www.postgresql.org/download/))
 - **Visual Studio Code** (recommended, but any code editor will work) ([Download VS Code](https://code.visualstudio.com/download))
 
 ## Step 1: Clone the Repository
@@ -49,9 +52,41 @@ Install all required packages using pip:
 pip install -r requirements.txt
 ```
 
-This may take a few minutes as it installs all necessary libraries including FastAPI, OpenAI, and other dependencies.
+This may take a few minutes as it installs all necessary libraries including FastAPI, SQLAlchemy, OpenAI, and other dependencies.
 
-## Step 4: Get an OpenAI API Key
+## Step 4: Set Up PostgreSQL Database
+
+The application now uses PostgreSQL for data storage. Follow these steps to set up the database:
+
+1. **Install PostgreSQL**:
+   - Follow the instructions for your operating system at [postgresql.org/download](https://www.postgresql.org/download/)
+   - Remember your PostgreSQL admin password during installation
+
+2. **Create a Database**:
+   - For Windows: Open pgAdmin (installed with PostgreSQL)
+   - For macOS/Linux: Open terminal and connect to PostgreSQL:
+     ```bash
+     sudo -u postgres psql
+     ```
+   - Create a new database:
+     ```sql
+     CREATE DATABASE pdf_qa_bot;
+     ```
+   - (Optional) Create a dedicated user:
+     ```sql
+     CREATE USER pdf_user WITH PASSWORD 'your_password';
+     GRANT ALL PRIVILEGES ON DATABASE pdf_qa_bot TO pdf_user;
+     ```
+
+3. **Install pgvector Extension**:
+   - Follow installation instructions at [github.com/pgvector/pgvector](https://github.com/pgvector/pgvector)
+   - Once installed, enable the extension in your database:
+     ```sql
+     \c pdf_qa_bot
+     CREATE EXTENSION vector;
+     ```
+
+## Step 5: Get an OpenAI API Key
 
 The application requires an OpenAI API key to function:
 
@@ -63,30 +98,45 @@ The application requires an OpenAI API key to function:
 
 > **Important**: OpenAI API usage incurs costs based on the number of tokens processed. As a student, be mindful of your usage. You can set billing limits in the OpenAI dashboard to avoid unexpected charges.
 
-## Step 5: Set Up Environment Variables
+## Step 6: Set Up Environment Variables
 
 1. Create a file named `.env` in the root directory of the project
-2. Add your OpenAI API key to the file:
+2. Add your configuration to the file:
 
 ```
+# OpenAI API Key
 OPENAI_API_KEY=your_api_key_here
 OPENAI_MODEL=gpt-4o-mini
+EMBEDDING_MODEL=text-embedding-3-small
+
+# Database Configuration
+DATABASE_URL=postgresql://postgres:your_password@localhost/pdf_qa_bot
+# Or if you created a dedicated user:
+# DATABASE_URL=postgresql://pdf_user:your_password@localhost/pdf_qa_bot
+
+# Security
 JWT_SECRET_KEY=your_secret_key_here
+
+# API configuration
+PORT=8000
+HOST=0.0.0.0
 ```
 
-Replace `your_api_key_here` with the API key you obtained in Step 4.
+Replace placeholders with your actual values.
 
 > **Security Note**: Never commit your `.env` file to version control. The `.gitignore` file should already be configured to exclude it.
 
-## Step 6: Create Database Directories
+## Step 7: Run Database Migrations
 
-Make sure the application has the necessary directory structure for storing data:
+Initialize the database schema:
 
 ```bash
-mkdir -p db/pdfs
+alembic upgrade head
 ```
 
-## Step 7: Run the Application
+This will create all necessary tables in your PostgreSQL database.
+
+## Step 8: Run the Application
 
 Start the FastAPI server with Uvicorn:
 
@@ -98,7 +148,7 @@ The `--reload` flag enables auto-reloading when you make changes to the code, wh
 
 You should see output indicating that the server is running, usually at `http://127.0.0.1:8000`.
 
-## Step 8: Access the Application
+## Step 9: Access the Application
 
 Open your web browser and navigate to:
 
@@ -106,9 +156,17 @@ Open your web browser and navigate to:
 http://127.0.0.1:8000
 ```
 
-You should now see the landing page of the GenAI PDF Q&A Bot.
+You should now see the landing page of the GenAI PDF Q&A Bot, featuring an animated PDF robot.
 
 ## Common Issues and Troubleshooting
+
+### Database Connection Issues
+
+If you encounter database errors:
+- Verify your PostgreSQL service is running
+- Check that your database credentials in `.env` are correct
+- Ensure you've run the migrations with `alembic upgrade head`
+- Make sure the pgvector extension is properly installed
 
 ### API Key Issues
 
@@ -116,6 +174,13 @@ If you see errors related to authentication with OpenAI, check:
 - Your API key is correctly set in the `.env` file
 - Your OpenAI account has billing set up
 - You have sufficient credits in your OpenAI account
+
+### Migration Errors
+
+If Alembic migration fails:
+- Check PostgreSQL is running
+- Ensure your database connection string is correct
+- Try running migrations with verbosity: `alembic upgrade head --verbose`
 
 ### Module Not Found Errors
 

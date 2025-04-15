@@ -420,7 +420,18 @@
                     throw new Error('Failed to load PDF library');
                 }
 
-                const pdfs = await response.json();
+                const pdfsData = await response.json();
+                console.log('PDF library data:', pdfsData);
+
+                // Convert to array if object is returned (key-value to array)
+                let pdfs = pdfsData;
+                if (pdfsData && typeof pdfsData === 'object' && !Array.isArray(pdfsData)) {
+                    console.log('Converting PDF object to array...');
+                    pdfs = Object.values(pdfsData);
+                }
+
+                console.log('Processed PDFs:', pdfs);
+
                 const pdfSelect = document.getElementById('pdf-select');
 
                 // Add each PDF to the dropdown

@@ -9,13 +9,12 @@ import os
 import uuid
 from datetime import datetime
 from pathlib import Path as PathLib
+from sqlalchemy.orm import Session
 from ..services.embedding import EmbeddingService
 from ..services.retriever import Retriever
 from ..services.llm import LLMService
-from ..auth.utils import (
-    get_current_user, get_user_pdf_path, get_user_pdfs,
-    save_user_pdfs, add_conversation_to_pdf
-)
+from ..auth.utils import get_current_user, get_user_pdf_path, get_user_pdfs, add_conversation_to_pdf
+from ..database import get_db, PDF, PDFChunk, Quiz
 from models.pydantic_schemas import QuestionRequest, AnswerResponse, PDFUploadResponse, ChunkInfo, PDFInfo, QuizRequest, QuizResponse, QuizSubmission, QuizResult
 
 router = APIRouter()
@@ -102,7 +101,8 @@ def chunk_text(pages: List[str], chunk_size: int = 1000, overlap: int = 200) -> 
 @router.post("/upload", response_model=PDFUploadResponse)
 async def upload_pdf(
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     Upload a PDF file, extract and chunk text, create embeddings.
@@ -143,19 +143,26 @@ async def upload_pdf(
             # Write the content
             f.write(content)
 
-        # Create PDF info record
-        pdfs = get_user_pdfs(user_id)
-        pdfs[pdf_id] = PDFInfo(
-            pdf_id=pdf_id,
+        # Create PDF record in database
+        new_pdf = PDF(
+            id=pdf_id,
+            user_id=user_id,
+            title=file.filename,
             filename=file.filename,
-            upload_date=datetime.now().isoformat(),
-            num_pages=len(pages),
-            num_chunks=len(chunks_with_metadata),
-            conversation_history=[]
+            file_path=str(pdf_path)
         )
+        db.add(new_pdf)
 
-        # Save PDF info
-        save_user_pdfs(user_id, pdfs)
+        # Add chunks to database
+        for i, chunk in enumerate(chunks_with_metadata):
+            pdf_chunk = PDFChunk(
+                pdf_id=pdf_id,
+                content=chunk["text"],
+                page_number=chunk["page_number"]
+            )
+            db.add(pdf_chunk)
+
+        db.commit()
 
         processing_time = time.time() - start_time
 
@@ -175,7 +182,8 @@ async def upload_pdf(
 @router.post("/ask", response_model=AnswerResponse)
 async def ask_question(
     request: QuestionRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     Answer a question about a previously uploaded PDF.
@@ -185,9 +193,10 @@ async def ask_question(
     try:
         # Check if the PDF belongs to the user
         user_id = current_user["user_id"]
-        pdfs = get_user_pdfs(user_id)
 
-        if request.pdf_id not in pdfs:
+        # Check if PDF exists and belongs to user
+        pdf = db.query(PDF).filter(PDF.id == request.pdf_id, PDF.user_id == user_id).first()
+        if not pdf:
             raise HTTPException(status_code=404, detail="PDF not found in your library")
 
         # Find relevant chunks
@@ -211,13 +220,14 @@ async def ask_question(
 
         processing_time = time.time() - start_time
 
-        # Save this Q&A to conversation history
+        # Save this Q&A to conversation history using database
         add_conversation_to_pdf(
             user_id,
             request.pdf_id,
             request.question,
             answer,
-            [chunk.dict() for chunk in source_chunks]
+            [chunk.dict() for chunk in source_chunks],
+            db
         )
 
         return AnswerResponse(
@@ -232,72 +242,93 @@ async def ask_question(
 
 
 @router.get("/library")
-async def get_user_library(current_user: dict = Depends(get_current_user)):
+async def get_user_library(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """
     Get a list of all PDFs in the user's library.
     """
     user_id = current_user["user_id"]
-    pdfs = get_user_pdfs(user_id)
-
-    return list(pdfs.values())
+    return get_user_pdfs(user_id, db)
 
 
 @router.get("/pdf/{pdf_id}")
-async def get_pdf_file(pdf_id: str, current_user: dict = Depends(get_current_user)):
+async def get_pdf_file(
+    pdf_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Get the PDF file for viewing/download.
     """
     user_id = current_user["user_id"]
-    pdfs = get_user_pdfs(user_id)
 
-    if pdf_id not in pdfs:
+    # Check if PDF exists and belongs to user
+    pdf = db.query(PDF).filter(PDF.id == pdf_id, PDF.user_id == user_id).first()
+    if not pdf:
         raise HTTPException(status_code=404, detail="PDF not found in your library")
 
-    pdf_path = get_user_pdf_path(user_id) / f"{pdf_id}.pdf"
+    pdf_path = PathLib(pdf.file_path)
 
     if not pdf_path.exists():
         raise HTTPException(status_code=404, detail="PDF file not found on server")
 
     return FileResponse(
         path=pdf_path,
-        filename=pdfs[pdf_id].filename,
+        filename=pdf.filename,
         media_type="application/pdf"
     )
 
 
 @router.get("/pdf/{pdf_id}/history")
-async def get_conversation_history(pdf_id: str, current_user: dict = Depends(get_current_user)):
+async def get_conversation_history(
+    pdf_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Get the conversation history for a specific PDF.
     """
     user_id = current_user["user_id"]
-    pdfs = get_user_pdfs(user_id)
 
-    if pdf_id not in pdfs:
+    # Check if PDF exists and belongs to user
+    pdf = db.query(PDF).filter(PDF.id == pdf_id, PDF.user_id == user_id).first()
+    if not pdf:
         raise HTTPException(status_code=404, detail="PDF not found in your library")
 
-    return pdfs[pdf_id].conversation_history
+    # Get conversations for this PDF
+    pdf_info = get_user_pdfs(user_id, db)
+    if pdf_id in pdf_info:
+        return pdf_info[pdf_id].conversation_history
+
+    return []
 
 
 @router.delete("/pdf/{pdf_id}")
-async def delete_pdf(pdf_id: str, current_user: dict = Depends(get_current_user)):
+async def delete_pdf(
+    pdf_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Delete a PDF from the user's library.
     """
     user_id = current_user["user_id"]
-    pdfs = get_user_pdfs(user_id)
 
-    if pdf_id not in pdfs:
+    # Check if PDF exists and belongs to user
+    pdf = db.query(PDF).filter(PDF.id == pdf_id, PDF.user_id == user_id).first()
+    if not pdf:
         raise HTTPException(status_code=404, detail="PDF not found in your library")
 
-    # Delete the PDF file
-    pdf_path = get_user_pdf_path(user_id) / f"{pdf_id}.pdf"
+    # Delete the PDF file if it exists
+    pdf_path = PathLib(pdf.file_path)
     if pdf_path.exists():
         os.remove(pdf_path)
 
-    # Remove from PDFs dictionary
-    del pdfs[pdf_id]
-    save_user_pdfs(user_id, pdfs)
+    # Delete PDF chunks from database
+    db.query(PDFChunk).filter(PDFChunk.pdf_id == pdf_id).delete()
+
+    # Delete the PDF from database
+    db.delete(pdf)
+    db.commit()
 
     return {"status": "success", "message": "PDF deleted successfully"}
 
@@ -307,19 +338,20 @@ async def get_page_preview(
     pdf_id: str,
     page_num: int = Path(..., ge=1),
     current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db),
     width: int = Query(800, description="Width of the preview image")
 ):
     """
     Generate a preview image for a specific page of a PDF.
     """
     user_id = current_user["user_id"]
-    pdfs = get_user_pdfs(user_id)
 
-    if pdf_id not in pdfs:
+    # Check if PDF exists and belongs to user
+    pdf = db.query(PDF).filter(PDF.id == pdf_id, PDF.user_id == user_id).first()
+    if not pdf:
         raise HTTPException(status_code=404, detail="PDF not found in your library")
 
-    pdf_path = get_user_pdf_path(user_id) / f"{pdf_id}.pdf"
-
+    pdf_path = PathLib(pdf.file_path)
     if not pdf_path.exists():
         raise HTTPException(status_code=404, detail="PDF file not found on server")
 
@@ -362,7 +394,8 @@ async def get_page_preview(
 @router.post("/quiz/generate", response_model=QuizResponse)
 async def generate_quiz(
     request: QuizRequest,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     Generate a multiple-choice quiz based on a previously uploaded PDF.
@@ -372,9 +405,10 @@ async def generate_quiz(
     try:
         # Check if the PDF belongs to the user
         user_id = current_user["user_id"]
-        pdfs = get_user_pdfs(user_id)
 
-        if request.pdf_id not in pdfs:
+        # Check if PDF exists and belongs to user
+        pdf = db.query(PDF).filter(PDF.id == request.pdf_id, PDF.user_id == user_id).first()
+        if not pdf:
             raise HTTPException(status_code=404, detail="PDF not found in your library")
 
         # Get comprehensive context from the PDF for quiz generation
@@ -433,10 +467,22 @@ async def generate_quiz(
 
         processing_time = time.time() - start_time
 
+        # Store quiz in database
+        quiz_id = str(uuid.uuid4())
+        quiz = Quiz(
+            id=quiz_id,
+            pdf_id=request.pdf_id,
+            user_id=user_id,
+            title=f"Quiz for {pdf.filename}",
+            questions=quiz_json
+        )
+        db.add(quiz)
+        db.commit()
+
         # Return the quiz
         return QuizResponse(
             pdf_id=request.pdf_id,
-            filename=pdfs[request.pdf_id].filename,
+            filename=pdf.filename,
             questions=quiz_json["questions"],
             processing_time=processing_time
         )
@@ -449,36 +495,36 @@ async def generate_quiz(
 @router.post("/quiz/submit", response_model=QuizResult)
 async def submit_quiz(
     submission: QuizSubmission,
-    current_user: Dict = Depends(get_current_user)
+    current_user: Dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """
     Submit a quiz for grading.
-
-    Args:
-        submission: QuizSubmission with PDF ID and answers
-        current_user: Current authenticated user
-
-    Returns:
-        QuizResult with score and feedback
     """
     try:
         # First, check if the PDF belongs to the user
         pdf_id = submission.pdf_id
         user_id = current_user["user_id"]
-        user_pdfs = get_user_pdfs(user_id)
 
-        if pdf_id not in user_pdfs:
-            raise HTTPException(status_code=404, detail="PDF not found")
+        # Check if PDF exists and belongs to user
+        pdf = db.query(PDF).filter(PDF.id == pdf_id, PDF.user_id == user_id).first()
+        if not pdf:
+            raise HTTPException(status_code=404, detail="PDF not found in your library")
 
-        # Get quiz data from the PDF info
-        pdf_info = user_pdfs[pdf_id]
-        if "quiz_data" not in pdf_info:
+        # Get the latest quiz for this PDF
+        quiz = db.query(Quiz).filter(
+            Quiz.pdf_id == pdf_id,
+            Quiz.user_id == user_id
+        ).order_by(Quiz.created_at.desc()).first()
+
+        if not quiz:
             raise HTTPException(status_code=400, detail="No quiz found for this PDF")
 
-        quiz_data = pdf_info["quiz_data"]
+        quiz_data = quiz.questions
 
         # Calculate score and generate feedback
-        total_questions = len(quiz_data["questions"])
+        questions = quiz_data["questions"]
+        total_questions = len(questions)
         correct_count = 0
         feedback = []
 
@@ -487,13 +533,17 @@ async def submit_quiz(
             if question_index >= total_questions:
                 continue
 
-            question = quiz_data["questions"][question_index]
+            question = questions[question_index]
 
             # Find if the selected answer is correct
             is_correct = False
+            correct_answer_idx = None
+
             for i, answer in enumerate(question["answers"]):
-                if i == selected_answer_index and answer["is_correct"]:
-                    is_correct = True
+                if answer.get("is_correct", False):
+                    correct_answer_idx = i
+                    if i == selected_answer_index:
+                        is_correct = True
                     break
 
             # Add to correct count if answer is right
@@ -504,7 +554,8 @@ async def submit_quiz(
             feedback.append({
                 "question_index": question_index,
                 "result": "correct" if is_correct else "incorrect",
-                "selected_answer": selected_answer_index
+                "selected_answer": selected_answer_index,
+                "correct_answer": correct_answer_idx
             })
 
         # Calculate percentage score
@@ -517,20 +568,6 @@ async def submit_quiz(
             percentage=percentage,
             feedback=feedback
         )
-
-        # Save the quiz result to the PDF info for history tracking (optional)
-        if "quiz_history" not in pdf_info:
-            pdf_info["quiz_history"] = []
-
-        pdf_info["quiz_history"].append({
-            "timestamp": datetime.now().isoformat(),
-            "score": correct_count,
-            "total": total_questions,
-            "percentage": percentage
-        })
-
-        # Update the PDF info
-        save_user_pdfs(current_user["username"], user_pdfs)
 
         return result
 
